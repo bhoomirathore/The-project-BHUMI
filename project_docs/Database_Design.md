@@ -1661,4 +1661,4 @@ If a proposed change introduces:
 
 it should be reviewed before implementation.
 
-The goal is to keep the MVP database **small, normalized, understandable, and aligned with the approved architecture**.
+The goal is to keep the MVP database **small, normalized, understandable, and aligned with the approved architecture*.
