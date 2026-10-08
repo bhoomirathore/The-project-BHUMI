@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import authService from '../../services/authService';
 
 export default function Register() {
   const [formData, setFormData] = useState({
-    userType: '',
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
-    aadhaar: '',
     password: '',
     confirmPassword: '',
     terms: false,
   });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -23,15 +25,46 @@ export default function Register() {
     }));
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match!');
+    setError('');
+    setSuccess('');
+
+    const cleanPhone = formData.phone.trim();
+    if (!/^\d{10}$/.test(cleanPhone)) {
+      setError('Please enter a valid 10-digit mobile number.');
       return;
     }
 
-    alert('Registration Successful!\n\nPlease verify your email to activate your account.');
-    navigate('/auth/login');
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    if (!formData.terms) {
+      setError('You must accept the terms and conditions.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const fullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`;
+      await authService.register({
+        name: fullName,
+        email: formData.email.trim(),
+        phone: cleanPhone,
+        password: formData.password,
+      });
+
+      setSuccess('Account created successfully! Redirecting to login...');
+      setTimeout(() => {
+        navigate('/auth/login');
+      }, 1500);
+    } catch (err) {
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -52,7 +85,7 @@ export default function Register() {
               Join B.H.U.M.I Today
             </h1>
             <p className="text-lg text-[#6E5D53]">
-              Create your account and start managing land records digitally
+              Create your citizen account and start managing land records digitally
             </p>
           </div>
 
@@ -63,7 +96,7 @@ export default function Register() {
           </div>
         </div>
 
-        {/* Right Side / Mobile Form */}
+        {/* Right Side / Form */}
         <div className="bg-[#F8F2F0] p-4 sm:p-8 md:p-10 lg:p-12 flex flex-col justify-center overflow-y-auto">
           {/* Mobile Logo */}
           <div className="md:hidden flex justify-center mb-6">
@@ -80,27 +113,22 @@ export default function Register() {
           <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-[20px] sm:rounded-[24px] p-6 sm:p-8 md:p-10 shadow-[0_10px_30px_rgba(43,27,20,0.06)]">
             <div className="text-center mb-6">
               <h2 className="text-2xl sm:text-3xl font-extrabold text-[#2B1B14] mb-1.5">Create Account</h2>
-              <p className="text-sm text-[#6E5D53]">Fill in your details to register</p>
+              <p className="text-sm text-[#6E5D53]">Citizen Registration</p>
             </div>
 
-            <form onSubmit={handleRegister} className="flex flex-col gap-3.5 sm:gap-4">
-              <div className="flex flex-col gap-1">
-                <label htmlFor="userType" className="text-xs sm:text-sm font-semibold text-[#2B1B14]">
-                  Register As
-                </label>
-                <select
-                  id="userType"
-                  value={formData.userType}
-                  onChange={handleChange}
-                  required
-                  className="p-3 bg-[#F8F2F0] border-2 border-[#D3CCC8] rounded-[10px] text-[#2B1B14] text-xs sm:text-sm focus:outline-none focus:border-[#2B1B14] focus:ring-2 focus:ring-[#2B1B14]/15 transition-all"
-                >
-                  <option value="">Select User Type</option>
-                  <option value="citizen">Citizen</option>
-                  <option value="authority">Local Authority</option>
-                </select>
+            {error && (
+              <div className="mb-4 p-3 rounded-lg bg-[#DC2626]/10 border border-[#DC2626]/20 text-[#DC2626] text-xs font-semibold">
+                {error}
               </div>
+            )}
 
+            {success && (
+              <div className="mb-4 p-3 rounded-lg bg-[#10B981]/15 border border-[#10B981]/30 text-[#047857] text-xs font-semibold">
+                {success}
+              </div>
+            )}
+
+            <form onSubmit={handleRegister} className="flex flex-col gap-3.5 sm:gap-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
                   <label htmlFor="firstName" className="text-xs sm:text-sm font-semibold text-[#2B1B14]">
@@ -111,7 +139,7 @@ export default function Register() {
                     id="firstName"
                     value={formData.firstName}
                     onChange={handleChange}
-                    placeholder="John"
+                    placeholder="Rajesh"
                     required
                     className="p-3 bg-[#F8F2F0] border-2 border-[#D3CCC8] rounded-[10px] text-[#2B1B14] text-xs sm:text-sm placeholder-[#7A6B63] focus:outline-none focus:border-[#2B1B14] focus:ring-2 focus:ring-[#2B1B14]/15 transition-all"
                   />
@@ -125,7 +153,7 @@ export default function Register() {
                     id="lastName"
                     value={formData.lastName}
                     onChange={handleChange}
-                    placeholder="Doe"
+                    placeholder="Singh"
                     required
                     className="p-3 bg-[#F8F2F0] border-2 border-[#D3CCC8] rounded-[10px] text-[#2B1B14] text-xs sm:text-sm placeholder-[#7A6B63] focus:outline-none focus:border-[#2B1B14] focus:ring-2 focus:ring-[#2B1B14]/15 transition-all"
                   />
@@ -147,35 +175,20 @@ export default function Register() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <label htmlFor="phone" className="text-xs sm:text-sm font-semibold text-[#2B1B14]">
-                    Mobile Number
-                  </label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    placeholder="10-digit mobile number"
-                    required
-                    className="p-3 bg-[#F8F2F0] border-2 border-[#D3CCC8] rounded-[10px] text-[#2B1B14] text-xs sm:text-sm placeholder-[#7A6B63] focus:outline-none focus:border-[#2B1B14] focus:ring-2 focus:ring-[#2B1B14]/15 transition-all"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label htmlFor="aadhaar" className="text-xs sm:text-sm font-semibold text-[#2B1B14]">
-                    Aadhaar Number
-                  </label>
-                  <input
-                    type="text"
-                    id="aadhaar"
-                    value={formData.aadhaar}
-                    onChange={handleChange}
-                    placeholder="12-digit Aadhaar number"
-                    required
-                    className="p-3 bg-[#F8F2F0] border-2 border-[#D3CCC8] rounded-[10px] text-[#2B1B14] text-xs sm:text-sm placeholder-[#7A6B63] focus:outline-none focus:border-[#2B1B14] focus:ring-2 focus:ring-[#2B1B14]/15 transition-all"
-                  />
-                </div>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="phone" className="text-xs sm:text-sm font-semibold text-[#2B1B14]">
+                  Mobile Number (10 Digits)
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="9876543210"
+                  maxLength={10}
+                  required
+                  className="p-3 bg-[#F8F2F0] border-2 border-[#D3CCC8] rounded-[10px] text-[#2B1B14] text-xs sm:text-sm placeholder-[#7A6B63] focus:outline-none focus:border-[#2B1B14] focus:ring-2 focus:ring-[#2B1B14]/15 transition-all"
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -219,15 +232,16 @@ export default function Register() {
                   className="w-4 h-4 accent-[#2B1B14] rounded cursor-pointer"
                 />
                 <label htmlFor="terms" className="text-xs text-[#6E5D53] cursor-pointer">
-                  I agree to the <a href="#" className="text-[#2B1B14] font-semibold underline">Terms &amp; Conditions</a> and <a href="#" className="text-[#2B1B14] font-semibold underline">Privacy Policy</a>
+                  I agree to the <span className="text-[#2B1B14] font-semibold underline">Terms &amp; Conditions</span> and <span className="text-[#2B1B14] font-semibold underline">Privacy Policy</span>
                 </label>
               </div>
 
               <button
                 type="submit"
-                className="mt-2 p-3.5 bg-[#2B1B14] rounded-[10px] text-[#F8F2F0] text-sm sm:text-base font-bold cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:bg-[#3D281F] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2B1B14] focus-visible:ring-offset-2"
+                disabled={loading}
+                className="mt-2 p-3.5 bg-[#2B1B14] rounded-[10px] text-[#F8F2F0] text-sm sm:text-base font-bold cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:bg-[#3D281F] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2B1B14] focus-visible:ring-offset-2"
               >
-                Create Account
+                {loading ? 'Creating Account...' : 'Create Account'}
               </button>
 
               <div className="text-center mt-1 text-xs sm:text-sm text-[#6E5D53]">

@@ -1,27 +1,38 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { isMockMode } from '../../api/client';
 
 export default function Login() {
-  const [userType, setUserType] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (!userType) {
-      alert('Please select user type');
-      return;
-    }
+    setError('');
+    setLoading(true);
 
-    if (userType === 'citizen') {
-      navigate('/citizen/dashboard');
-    } else if (userType === 'authority') {
-      navigate('/authority/dashboard');
-    } else if (userType === 'government') {
-      navigate('/government/dashboard');
+    try {
+      const user = await login(email, password);
+      if (user.role === 'CITIZEN') {
+        navigate('/citizen/dashboard');
+      } else if (user.role === 'REGISTRAR') {
+        navigate('/authority/dashboard');
+      } else if (user.role === 'GOVERNMENT_HQ') {
+        navigate('/government/dashboard');
+      } else {
+        navigate('/');
+      }
+    } catch (err) {
+      setError(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -74,25 +85,13 @@ export default function Login() {
               <p className="text-sm text-[#6E5D53]">Sign in to access your account</p>
             </div>
 
-            <form onSubmit={handleLogin} className="flex flex-col gap-4 sm:gap-5">
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="userType" className="text-sm font-semibold text-[#2B1B14]">
-                  Login As
-                </label>
-                <select
-                  id="userType"
-                  value={userType}
-                  onChange={(e) => setUserType(e.target.value)}
-                  required
-                  className="p-3 sm:p-3.5 bg-[#F8F2F0] border-2 border-[#D3CCC8] rounded-[10px] text-[#2B1B14] text-sm sm:text-base focus:outline-none focus:border-[#2B1B14] focus:ring-2 focus:ring-[#2B1B14]/15 transition-all"
-                >
-                  <option value="">Select User Type</option>
-                  <option value="citizen">Citizen</option>
-                  <option value="authority">Local Authority</option>
-                  <option value="government">Government Official</option>
-                </select>
+            {error && (
+              <div className="mb-5 p-3 rounded-lg bg-[#DC2626]/10 border border-[#DC2626]/20 text-[#DC2626] text-xs font-semibold">
+                {error}
               </div>
+            )}
 
+            <form onSubmit={handleLogin} className="flex flex-col gap-4 sm:gap-5">
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="email" className="text-sm font-semibold text-[#2B1B14]">
                   Email Address
@@ -132,7 +131,7 @@ export default function Login() {
                 </div>
               </div>
 
-              <div className="flex justify-between items-center text-xs sm:text-sm">
+              <div className="flex items-center text-xs sm:text-sm">
                 <label className="flex items-center gap-2 text-[#6E5D53] cursor-pointer select-none">
                   <input
                     type="checkbox"
@@ -142,46 +141,15 @@ export default function Login() {
                   />
                   <span>Remember me</span>
                 </label>
-                <Link
-                  to="/auth/forgot-password"
-                  className="text-[#2B1B14] font-medium hover:underline py-1"
-                >
-                  Forgot Password?
-                </Link>
               </div>
 
               <button
                 type="submit"
-                className="mt-1 p-3.5 bg-[#2B1B14] rounded-[10px] text-[#F8F2F0] text-sm sm:text-base font-bold cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:bg-[#3D281F] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2B1B14] focus-visible:ring-offset-2"
+                disabled={loading}
+                className="mt-1 p-3.5 bg-[#2B1B14] rounded-[10px] text-[#F8F2F0] text-sm sm:text-base font-bold cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:bg-[#3D281F] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2B1B14] focus-visible:ring-offset-2"
               >
-                Sign In
+                {loading ? 'Signing in...' : 'Sign In'}
               </button>
-
-              <div className="text-center relative my-1">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-[#D3CCC8]" />
-                </div>
-                <span className="relative px-3 bg-[#E6DEDA] text-xs text-[#6E5D53] uppercase tracking-wider font-semibold">
-                  OR
-                </span>
-              </div>
-
-              <div className="flex flex-col gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => alert('Google authentication service')}
-                  className="p-3 bg-[#F8F2F0] border-2 border-[#D3CCC8] rounded-[10px] text-[#2B1B14] text-xs sm:text-sm font-semibold hover:border-[#2B1B14] hover:bg-[#D3CCC8]/40 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                >
-                  <span>Continue with Google</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => alert('Aadhaar authentication service')}
-                  className="p-3 bg-[#F8F2F0] border-2 border-[#D3CCC8] rounded-[10px] text-[#2B1B14] text-xs sm:text-sm font-semibold hover:border-[#2B1B14] hover:bg-[#D3CCC8]/40 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                >
-                  <span>Login with Aadhaar</span>
-                </button>
-              </div>
 
               <div className="text-center mt-2 text-xs sm:text-sm text-[#6E5D53]">
                 Don't have an account?{' '}
@@ -190,10 +158,19 @@ export default function Login() {
                 </Link>
               </div>
             </form>
+
+            {isMockMode() && (
+              <div className="mt-5 p-3 rounded-lg bg-[#F8F2F0] border border-[#D3CCC8] text-[0.72rem] text-[#7A6B63] leading-relaxed">
+                <span className="font-bold text-[#2B1B14] block mb-0.5">Demo Accounts:</span>
+                <div>Citizen: <span className="font-mono text-[#2B1B14]">rajesh.singh@example.com</span></div>
+                <div>Registrar: <span className="font-mono text-[#2B1B14]">ramesh.sharma@example.com</span></div>
+                <div>HQ: <span className="font-mono text-[#2B1B14]">mukesh.kumar@example.com</span></div>
+              </div>
+            )}
           </div>
 
           <div className="text-center mt-5 text-xs text-[#6E5D53]">
-            Secure Login • Government of India Initiative
+            B.H.U.M.I. prototype (not an official government service)
           </div>
         </div>
       </div>
