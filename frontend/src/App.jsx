@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './routes/ProtectedRoute';
 
 import LandingPage from './pages/LandingPage';
+import PublicVerify from './pages/PublicVerify';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 
@@ -34,6 +35,9 @@ export default function App() {
         <Routes>
           {/* Landing Page (Public) */}
           <Route path="/" element={<LandingPage />} />
+
+          {/* Public Verify Page (No auth required) */}
+          <Route path="/verify" element={<PublicVerify />} />
 
           {/* Authentication Routes (Public) */}
           <Route path="/auth/login" element={<Login />} />
