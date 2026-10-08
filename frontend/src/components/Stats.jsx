@@ -62,6 +62,9 @@ export default function Stats() {
           <StatItem key={index} target={stat.target} label={stat.label} />
         ))}
       </div>
+      <p className="text-center text-[0.72rem] text-[#7A6B63] mt-6 max-w-[1300px] mx-auto">
+        Sample figures for demonstration only. Not representative of actual land registry data.
+      </p>
     </section>
   );
 }
