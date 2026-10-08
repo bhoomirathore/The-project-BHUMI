@@ -60,9 +60,17 @@ export default function Sidebar({ portal = 'citizen' }) {
     citizen: {
       sections: [
         {
-          label: 'My Account',
+          label: 'Overview',
           links: [
             { to: '/citizen/dashboard', label: 'Dashboard' },
+          ],
+        },
+        {
+          label: 'Property & Transfers',
+          links: [
+            { to: '/citizen/properties', label: 'My Properties' },
+            { to: '/citizen/new-transfer', label: 'New Transfer' },
+            { to: '/citizen/applications', label: 'My Applications' },
           ],
         },
         {

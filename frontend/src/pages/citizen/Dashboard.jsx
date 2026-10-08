@@ -1,44 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
+import { useAuth } from '../../hooks/useAuth';
+import propertyService from '../../services/propertyService';
+import applicationService from '../../services/applicationService';
+import documentService from '../../services/documentService';
+import Toast from '../../components/Toast';
 
 export default function CitizenDashboard() {
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: 'Registry Appointment Reminder',
-      message: 'Your appointment is scheduled for tomorrow at 10:00 AM',
-      time: '5 min ago',
-      unread: true,
-    },
-    {
-      id: 2,
-      title: 'Verification Complete',
-      message: 'Land verification for Khasra 456/2 has been completed',
-      time: '2 hours ago',
-      unread: true,
-    },
-    {
-      id: 3,
-      title: 'System Update',
-      message: 'New features added to citizen portal',
-      time: '1 day ago',
-      unread: false,
-    },
-  ]);
 
-  const markAsRead = (id) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, unread: false } : n))
-    );
-  };
+  const [properties, setProperties] = useState([]);
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toastMessage, setToastMessage] = useState('');
 
-  const handleDownload = (khasra) => {
-    alert(`Downloading E-Registry for Khasra No. ${khasra}`);
-    setTimeout(() => {
-      alert('Download started!');
-    }, 500);
+  useEffect(() => {
+    async function loadDashboardData() {
+      if (user?.id) {
+        try {
+          const [props, apps] = await Promise.all([
+            propertyService.getUserProperties(user.id),
+            applicationService.getUserApplications(user.id),
+          ]);
+          setProperties(props);
+          setApplications(apps);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    }
+    loadDashboardData();
+  }, [user]);
+
+  // Derived stats
+  const totalProperties = properties.length;
+  const activeProperties = properties.filter((p) => p.status === 'Active').length;
+  const transfersInProgress = applications.filter(
+    (a) => !['COMPLETED', 'REJECTED', 'FAILED'].includes(a.applicationStatus)
+  ).length;
+  const upcomingAppointments = applications.filter((a) => a.appointment).length;
+
+  // Recent activity derived from applications
+  const recentActivities = applications.slice(0, 4).map((app) => ({
+    id: app.id,
+    title: `Transfer Application ${app.id}`,
+    description: `Parcel ${app.propertyId} · Status: ${app.applicationStatus}`,
+    time: app.completedAt || app.approvedAt || app.submittedAt || 'Recently',
+    appId: app.id,
+  }));
+
+  const handleDownload = async (appId) => {
+    const res = await documentService.downloadERegistry(appId);
+    if (res?.isMockNotice) {
+      setToastMessage(res.message);
+    }
   };
 
   return (
@@ -46,36 +65,28 @@ export default function CitizenDashboard() {
       <Sidebar portal="citizen" />
 
       <main className="flex-1 md:ml-[280px] p-4 sm:p-6 md:p-8 lg:p-10 pt-16 md:pt-8 max-w-full overflow-x-hidden">
+        {toastMessage && (
+          <Toast message={toastMessage} type="info" onClose={() => setToastMessage('')} />
+        )}
+
         {/* Top Header */}
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 sm:pb-8 border-b border-[#D3CCC8] mb-6 sm:mb-8">
           <div>
             <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#2B1B14]">
-              Welcome back, Rajesh Kumar
+              Welcome back, {user?.name || 'Rajesh Kumar Singh'}
             </h1>
-            <p className="text-[#6E5D53] text-xs sm:text-sm mt-1">Manage your land records with ease</p>
+            <p className="text-[#6E5D53] text-xs sm:text-sm mt-1">
+              Manage your land records and transfer applications
+            </p>
           </div>
-          <div className="flex items-center gap-3 sm:gap-4 self-end sm:self-auto">
-            <div
-              className="relative p-2 sm:p-2.5 rounded-lg bg-[#E6DEDA] border border-[#D3CCC8] cursor-pointer hover:border-[#2B1B14] transition-colors"
-              onClick={() => alert('Notifications panel')}
-              title="Notifications"
-            >
-              <span className="text-lg">🔔</span>
-              <span className="absolute -top-1 -right-1 bg-[#EF4444] text-white text-[0.65rem] font-bold px-1.5 py-0.5 rounded-full">
-                3
-              </span>
+
+          <div className="flex items-center gap-3 p-2 px-3 rounded-lg bg-[#E6DEDA] border border-[#D3CCC8]">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2B1B14] to-[#6E5D53] text-[#F8F2F0] font-bold text-xs flex items-center justify-center">
+              {user?.avatar || 'RS'}
             </div>
-            <div
-              className="flex items-center gap-3 p-2 px-3 rounded-lg bg-[#E6DEDA] border border-[#D3CCC8] cursor-pointer hover:border-[#2B1B14] transition-colors"
-              onClick={() => alert('Profile menu')}
-            >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2B1B14] to-[#6E5D53] text-[#F8F2F0] font-bold text-xs flex items-center justify-center">
-                RK
-              </div>
-              <div className="hidden sm:flex flex-col">
-                <span className="text-xs font-bold text-[#2B1B14]">Rajesh Kumar</span>
-                <span className="text-[0.68rem] text-[#6E5D53]">Citizen</span>
-              </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-[#2B1B14]">{user?.name}</span>
+              <span className="text-[0.68rem] text-[#6E5D53]">Citizen</span>
             </div>
           </div>
         </header>
@@ -83,46 +94,56 @@ export default function CitizenDashboard() {
         {/* Quick Stats Cards */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
           <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm hover:-translate-y-1 transition-all">
-            <div className="text-3xl font-extrabold text-[#2B1B14]">
-              3
-            </div>
+            <div className="text-3xl font-extrabold text-[#2B1B14]">{totalProperties}</div>
             <div className="text-sm font-medium text-[#6E5D53] mt-1">Total Properties</div>
           </div>
+
           <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm hover:-translate-y-1 transition-all">
-            <div className="text-3xl font-extrabold text-[#2B1B14]">
-              2
-            </div>
-            <div className="text-sm font-medium text-[#6E5D53] mt-1">Verified Records</div>
+            <div className="text-3xl font-extrabold text-[#047857]">{activeProperties}</div>
+            <div className="text-sm font-medium text-[#6E5D53] mt-1">Active Properties</div>
           </div>
+
           <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm hover:-translate-y-1 transition-all">
-            <div className="text-3xl font-extrabold text-[#2B1B14]">
-              1
-            </div>
-            <div className="text-sm font-medium text-[#6E5D53] mt-1">Pending Process</div>
+            <div className="text-3xl font-extrabold text-[#B45309]">{transfersInProgress}</div>
+            <div className="text-sm font-medium text-[#6E5D53] mt-1">Transfers In Progress</div>
           </div>
+
           <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm hover:-translate-y-1 transition-all">
-            <div className="text-3xl font-extrabold text-[#2B1B14]">
-              1
-            </div>
-            <div className="text-sm font-medium text-[#6E5D53] mt-1">Upcoming Appointment</div>
+            <div className="text-3xl font-extrabold text-[#2563EB]">{upcomingAppointments}</div>
+            <div className="text-sm font-medium text-[#6E5D53] mt-1">Upcoming Appointments</div>
           </div>
         </section>
 
-        {/* Quick Actions */}
+        {/* Quick Actions (4 Cards) */}
         <section className="mb-10">
           <h2 className="text-xl font-bold text-[#2B1B14] mb-5">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div
+              onClick={() => navigate('/citizen/new-transfer')}
+              className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm hover:-translate-y-1 hover:border-[#2B1B14] cursor-pointer transition-all flex flex-col justify-between"
+            >
+              <div>
+                <h3 className="text-base font-bold text-[#2B1B14] mb-2">New Transfer</h3>
+                <p className="text-xs text-[#6E5D53] leading-relaxed">
+                  Start a new land transfer mutation request
+                </p>
+              </div>
+              <button className="mt-6 w-full py-2 bg-[#2B1B14] text-[#F8F2F0] font-bold rounded-lg text-xs shadow hover:bg-[#3D281F] transition-all">
+                Initiate Now
+              </button>
+            </div>
+
             <div
               onClick={() => navigate('/citizen/verify-land')}
               className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm hover:-translate-y-1 hover:border-[#2B1B14] cursor-pointer transition-all flex flex-col justify-between"
             >
               <div>
-                <h3 className="text-lg font-bold text-[#2B1B14] mb-2">Verify Land Ownership</h3>
-                <p className="text-sm text-[#6E5D53] leading-relaxed">
-                  Check ownership details using Khasra number
+                <h3 className="text-base font-bold text-[#2B1B14] mb-2">Verify Land</h3>
+                <p className="text-xs text-[#6E5D53] leading-relaxed">
+                  Verify title and synchronized records using Khasra
                 </p>
               </div>
-              <button className="mt-6 w-full py-2.5 bg-[#2B1B14] text-[#F8F2F0] font-bold rounded-lg text-sm shadow hover:shadow-md transition-all">
+              <button className="mt-6 w-full py-2 bg-[#2B1B14] text-[#F8F2F0] font-bold rounded-lg text-xs shadow hover:bg-[#3D281F] transition-all">
                 Verify Now
               </button>
             </div>
@@ -132,12 +153,12 @@ export default function CitizenDashboard() {
               className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm hover:-translate-y-1 hover:border-[#2B1B14] cursor-pointer transition-all flex flex-col justify-between"
             >
               <div>
-                <h3 className="text-lg font-bold text-[#2B1B14] mb-2">Book Registry Appointment</h3>
-                <p className="text-sm text-[#6E5D53] leading-relaxed">
-                  Schedule your visit to registrar office
+                <h3 className="text-base font-bold text-[#2B1B14] mb-2">Book Appointment</h3>
+                <p className="text-xs text-[#6E5D53] leading-relaxed">
+                  Schedule physical Sub-Registrar Office slot
                 </p>
               </div>
-              <button className="mt-6 w-full py-2.5 bg-[#2B1B14] text-[#F8F2F0] font-bold rounded-lg text-sm shadow hover:shadow-md transition-all">
+              <button className="mt-6 w-full py-2 bg-[#2B1B14] text-[#F8F2F0] font-bold rounded-lg text-xs shadow hover:bg-[#3D281F] transition-all">
                 Book Slot
               </button>
             </div>
@@ -147,74 +168,67 @@ export default function CitizenDashboard() {
               className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm hover:-translate-y-1 hover:border-[#2B1B14] cursor-pointer transition-all flex flex-col justify-between"
             >
               <div>
-                <h3 className="text-lg font-bold text-[#2B1B14] mb-2">Download E-Registry</h3>
-                <p className="text-sm text-[#6E5D53] leading-relaxed">
-                  Get digital copy of your land registry
+                <h3 className="text-base font-bold text-[#2B1B14] mb-2">Download E-Registry</h3>
+                <p className="text-xs text-[#6E5D53] leading-relaxed">
+                  View and download finalized digital certificates
                 </p>
               </div>
-              <button className="mt-6 w-full py-2.5 bg-[#2B1B14] text-[#F8F2F0] font-bold rounded-lg text-sm shadow hover:shadow-md transition-all">
+              <button className="mt-6 w-full py-2 bg-[#2B1B14] text-[#F8F2F0] font-bold rounded-lg text-xs shadow hover:bg-[#3D281F] transition-all">
                 Download
               </button>
             </div>
           </div>
         </section>
 
-        {/* Recent Activity */}
+        {/* Recent Activity (Derived from user applications) */}
         <section className="mb-10">
           <h2 className="text-xl font-bold text-[#2B1B14] mb-5">Recent Activity</h2>
           <div className="flex flex-col gap-4">
-            <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h4 className="font-bold text-[#2B1B14] text-base">Land Verification Completed</h4>
-                <p className="text-sm text-[#6E5D53]">Khasra No. 456/2 - Verified Successfully</p>
-                <span className="text-xs text-[#7A6B63]">2 hours ago</span>
+            {recentActivities.length === 0 ? (
+              <div className="p-6 bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl text-xs text-[#6E5D53]">
+                No recent transfer activity recorded.
               </div>
-              <button
-                onClick={() => alert('Viewing details for: Land Verification Completed')}
-                className="py-1.5 px-4 bg-transparent border border-[#D3CCC8] hover:border-[#2B1B14] text-[#2B1B14] text-xs font-semibold rounded-lg transition-colors"
-              >
-                View Details
-              </button>
-            </div>
-
-            <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h4 className="font-bold text-[#2B1B14] text-base">Appointment Scheduled</h4>
-                <p className="text-sm text-[#6E5D53]">Registry appointment on 15th Jan 2024, 10:00 AM</p>
-                <span className="text-xs text-[#7A6B63]">1 day ago</span>
-              </div>
-              <button
-                onClick={() => alert('Viewing details for: Appointment Scheduled')}
-                className="py-1.5 px-4 bg-transparent border border-[#D3CCC8] hover:border-[#2B1B14] text-[#2B1B14] text-xs font-semibold rounded-lg transition-colors"
-              >
-                View Details
-              </button>
-            </div>
-
-            <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h4 className="font-bold text-[#2B1B14] text-base">E-Registry Downloaded</h4>
-                <p className="text-sm text-[#6E5D53]">Khasra No. 123/1 - PDF downloaded</p>
-                <span className="text-xs text-[#7A6B63]">3 days ago</span>
-              </div>
-              <button
-                onClick={() => alert('Viewing details for: E-Registry Downloaded')}
-                className="py-1.5 px-4 bg-transparent border border-[#D3CCC8] hover:border-[#2B1B14] text-[#2B1B14] text-xs font-semibold rounded-lg transition-colors"
-              >
-                View Details
-              </button>
-            </div>
+            ) : (
+              recentActivities.map((act) => (
+                <div
+                  key={act.id}
+                  className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+                >
+                  <div>
+                    <h4 className="font-bold text-[#2B1B14] text-sm">{act.title}</h4>
+                    <p className="text-xs text-[#6E5D53] mt-0.5">{act.description}</p>
+                    <span className="text-[0.68rem] text-[#7A6B63] block mt-1">{act.time}</span>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/citizen/applications/${act.appId}`)}
+                    className="py-1.5 px-4 bg-transparent border border-[#D3CCC8] hover:border-[#2B1B14] text-[#2B1B14] text-xs font-semibold rounded-lg transition-colors"
+                  >
+                    View Details
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         </section>
 
         {/* My Properties Table */}
         <section className="mb-10">
-          <h2 className="text-xl font-bold text-[#2B1B14] mb-5">My Properties</h2>
+          <div className="flex justify-between items-center mb-5">
+            <h2 className="text-xl font-bold text-[#2B1B14]">My Properties</h2>
+            <button
+              onClick={() => navigate('/citizen/properties')}
+              className="text-xs font-bold text-[#2B1B14] hover:underline"
+            >
+              View All Properties &rarr;
+            </button>
+          </div>
+
           <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl overflow-x-auto shadow-sm">
-            <table className="w-full text-left text-sm border-collapse min-w-[640px]">
+            <table className="w-full text-left text-xs sm:text-sm border-collapse min-w-[640px]">
               <thead>
                 <tr className="border-b border-[#D3CCC8] bg-[#D3CCC8]/30 text-[#6E5D53]">
                   <th className="p-4 font-semibold">Khasra No.</th>
+                  <th className="p-4 font-semibold">Property ID</th>
                   <th className="p-4 font-semibold">Location</th>
                   <th className="p-4 font-semibold">Area (sq. ft)</th>
                   <th className="p-4 font-semibold">Status</th>
@@ -222,118 +236,68 @@ export default function CitizenDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#D3CCC8] text-[#2B1B14]">
-                <tr>
-                  <td className="p-4 font-bold text-[#2B1B14]">123/1</td>
-                  <td className="p-4">Village Rampur, Tehsil Sadar</td>
-                  <td className="p-4">2,500</td>
-                  <td className="p-4">
-                    <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-[#10B981]/15 text-[#047857] border border-[#10B981]/30">
-                      Verified
-                    </span>
-                  </td>
-                  <td className="p-4 flex gap-2">
-                    <button
-                      onClick={() => alert('Viewing details for Khasra No. 123/1')}
-                      className="px-3 py-1 bg-transparent border border-[#D3CCC8] rounded text-xs hover:border-[#2B1B14] transition-colors"
-                    >
-                      View
-                    </button>
-                    <button
-                      onClick={() => handleDownload('123/1')}
-                      className="px-3 py-1 bg-[#D3CCC8] border border-[#D3CCC8] rounded text-xs hover:bg-[#D3CCC8]/70 transition-colors"
-                    >
-                      Download
-                    </button>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="p-4 font-bold text-[#2B1B14]">456/2</td>
-                  <td className="p-4">Village Shyampur, Tehsil North</td>
-                  <td className="p-4">1,800</td>
-                  <td className="p-4">
-                    <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-[#10B981]/15 text-[#047857] border border-[#10B981]/30">
-                      Verified
-                    </span>
-                  </td>
-                  <td className="p-4 flex gap-2">
-                    <button
-                      onClick={() => alert('Viewing details for Khasra No. 456/2')}
-                      className="px-3 py-1 bg-transparent border border-[#D3CCC8] rounded text-xs hover:border-[#2B1B14] transition-colors"
-                    >
-                      View
-                    </button>
-                    <button
-                      onClick={() => handleDownload('456/2')}
-                      className="px-3 py-1 bg-[#D3CCC8] border border-[#D3CCC8] rounded text-xs hover:bg-[#D3CCC8]/70 transition-colors"
-                    >
-                      Download
-                    </button>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="p-4 font-bold text-[#2B1B14]">789/3</td>
-                  <td className="p-4">Village Greenfield, Tehsil East</td>
-                  <td className="p-4">3,200</td>
-                  <td className="p-4">
-                    <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-[#F59E0B]/15 text-[#B45309] border border-[#F59E0B]/30">
-                      Pending
-                    </span>
-                  </td>
-                  <td className="p-4 flex gap-2">
-                    <button
-                      onClick={() => alert('Viewing details for Khasra No. 789/3')}
-                      className="px-3 py-1 bg-transparent border border-[#D3CCC8] rounded text-xs hover:border-[#2B1B14] transition-colors"
-                    >
-                      View
-                    </button>
-                    <button
-                      disabled
-                      className="px-3 py-1 bg-[#D3CCC8]/30 border border-[#D3CCC8]/30 text-[#7A6B63]/60 rounded text-xs cursor-not-allowed"
-                    >
-                      Download
-                    </button>
-                  </td>
-                </tr>
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="p-6 text-center text-xs text-[#6E5D53]">
+                      Loading parcels...
+                    </td>
+                  </tr>
+                ) : (
+                  properties.map((prop) => {
+                    const completedApp = applications.find(
+                      (a) => a.propertyId === prop.propertyId && a.hasERegistry
+                    );
+
+                    return (
+                      <tr key={prop.propertyId} className="hover:bg-[#D3CCC8]/20 transition-colors">
+                        <td className="p-4 font-bold text-[#2B1B14]">{prop.khasraNumber}</td>
+                        <td className="p-4 font-mono text-[#6E5D53]">{prop.propertyId}</td>
+                        <td className="p-4 text-[#6E5D53]">
+                          Village {prop.village}, Tehsil {prop.tehsil}
+                        </td>
+                        <td className="p-4 font-mono">{prop.areaSqFt.toLocaleString()}</td>
+                        <td className="p-4">
+                          <span
+                            className={`px-2.5 py-0.5 text-xs font-bold rounded-full ${
+                              prop.status === 'Active'
+                                ? 'bg-[#10B981]/15 text-[#047857] border border-[#10B981]/30'
+                                : 'bg-[#F59E0B]/15 text-[#B45309] border border-[#F59E0B]/30'
+                            }`}
+                          >
+                            {prop.status}
+                          </span>
+                        </td>
+                        <td className="p-4 flex gap-2">
+                          <button
+                            onClick={() => navigate('/citizen/properties')}
+                            className="px-3 py-1 bg-transparent border border-[#D3CCC8] rounded text-xs hover:border-[#2B1B14] transition-colors"
+                          >
+                            View
+                          </button>
+                          {completedApp ? (
+                            <button
+                              onClick={() => handleDownload(completedApp.id)}
+                              className="px-3 py-1 bg-[#2B1B14] text-[#F8F2F0] rounded text-xs hover:bg-[#3D281F] transition-colors"
+                            >
+                              Download
+                            </button>
+                          ) : (
+                            <button
+                              disabled
+                              title="No finalized E-Registry available for this property"
+                              className="px-3 py-1 bg-[#D3CCC8]/30 border border-[#D3CCC8]/30 text-[#7A6B63]/60 rounded text-xs cursor-not-allowed"
+                            >
+                              Download
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
-        </section>
-
-        {/* Notifications Panel */}
-        <section className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm mb-6">
-          <h2 className="text-xl font-bold text-[#2B1B14] mb-5">Notifications</h2>
-          <div className="flex flex-col gap-3">
-            {notifications.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => markAsRead(item.id)}
-                className={`p-4 rounded-lg border transition-all cursor-pointer flex items-start gap-3 ${
-                  item.unread
-                    ? 'bg-[#D3CCC8]/50 border-[#D3CCC8]'
-                    : 'bg-[#F8F2F0]/60 border-[#D3CCC8]/50'
-                }`}
-              >
-                <div
-                  className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${
-                    item.unread ? 'bg-[#2B1B14]' : 'bg-[#7A6B63]'
-                  }`}
-                />
-                <div className="flex-1">
-                  <h4 className="text-sm font-bold text-[#2B1B14]">{item.title}</h4>
-                  <p className="text-xs text-[#6E5D53] mt-0.5">{item.message}</p>
-                  <span className="text-[0.68rem] text-[#7A6B63] mt-1 block">
-                    {item.time}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={() => alert('Redirecting to all notifications page...')}
-            className="mt-5 w-full py-2.5 bg-transparent border border-[#D3CCC8] text-[#2B1B14] text-xs font-bold rounded-lg hover:border-[#2B1B14] transition-colors"
-          >
-            View All Notifications
-          </button>
         </section>
       </main>
     </div>

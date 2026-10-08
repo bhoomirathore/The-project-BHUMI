@@ -8,6 +8,10 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 
 import CitizenDashboard from './pages/citizen/Dashboard';
+import CitizenProperties from './pages/citizen/Properties';
+import CitizenNewTransfer from './pages/citizen/NewTransfer';
+import CitizenApplications from './pages/citizen/Applications';
+import CitizenApplicationDetail from './pages/citizen/ApplicationDetail';
 import CitizenVerifyLand from './pages/citizen/VerifyLand';
 import CitizenBookAppointment from './pages/citizen/BookAppointment';
 import CitizenDownloadRegistry from './pages/citizen/DownloadRegistry';
@@ -44,6 +48,38 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={['CITIZEN']}>
                 <CitizenDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/citizen/properties"
+            element={
+              <ProtectedRoute allowedRoles={['CITIZEN']}>
+                <CitizenProperties />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/citizen/new-transfer"
+            element={
+              <ProtectedRoute allowedRoles={['CITIZEN']}>
+                <CitizenNewTransfer />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/citizen/applications"
+            element={
+              <ProtectedRoute allowedRoles={['CITIZEN']}>
+                <CitizenApplications />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/citizen/applications/:id"
+            element={
+              <ProtectedRoute allowedRoles={['CITIZEN']}>
+                <CitizenApplicationDetail />
               </ProtectedRoute>
             }
           />
