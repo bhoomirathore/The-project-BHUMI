@@ -1,5 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './routes/ProtectedRoute';
 
 import LandingPage from './pages/LandingPage';
 import Login from './pages/auth/Login';
@@ -23,66 +25,127 @@ import GovernmentDisputes from './pages/government/Disputes';
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Landing Page */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/index.html" element={<Navigate to="/" replace />} />
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Landing Page (Public) */}
+          <Route path="/" element={<LandingPage />} />
 
-        {/* Authentication Routes */}
-        <Route path="/auth/login" element={<Login />} />
-        <Route path="/login" element={<Navigate to="/auth/login" replace />} />
-        <Route path="/auth/login.html" element={<Navigate to="/auth/login" replace />} />
+          {/* Authentication Routes (Public) */}
+          <Route path="/auth/login" element={<Login />} />
+          <Route path="/login" element={<Navigate to="/auth/login" replace />} />
 
-        <Route path="/auth/register" element={<Register />} />
-        <Route path="/register" element={<Navigate to="/auth/register" replace />} />
-        <Route path="/auth/register.html" element={<Navigate to="/auth/register" replace />} />
+          <Route path="/auth/register" element={<Register />} />
+          <Route path="/register" element={<Navigate to="/auth/register" replace />} />
 
-        <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-        <Route path="/auth/forgot-password.html" element={<Navigate to="/auth/forgot-password" replace />} />
+          <Route path="/auth/forgot-password" element={<ForgotPassword />} />
 
-        {/* Citizen Portal Routes */}
-        <Route path="/citizen/dashboard" element={<CitizenDashboard />} />
-        <Route path="/pages/citizen/dashboard.html" element={<Navigate to="/citizen/dashboard" replace />} />
+          {/* Citizen Portal Routes (Protected: CITIZEN) */}
+          <Route
+            path="/citizen/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['CITIZEN']}>
+                <CitizenDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/citizen/verify-land"
+            element={
+              <ProtectedRoute allowedRoles={['CITIZEN']}>
+                <CitizenVerifyLand />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/citizen/book-appointment"
+            element={
+              <ProtectedRoute allowedRoles={['CITIZEN']}>
+                <CitizenBookAppointment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/citizen/download-registry"
+            element={
+              <ProtectedRoute allowedRoles={['CITIZEN']}>
+                <CitizenDownloadRegistry />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route path="/citizen/verify-land" element={<CitizenVerifyLand />} />
-        <Route path="/pages/citizen/verify-land.html" element={<Navigate to="/citizen/verify-land" replace />} />
+          {/* Authority Portal Routes (Protected: REGISTRAR) */}
+          <Route
+            path="/authority/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['REGISTRAR']}>
+                <AuthorityDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/authority/verification"
+            element={
+              <ProtectedRoute allowedRoles={['REGISTRAR']}>
+                <AuthorityVerification />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/authority/ekyc"
+            element={
+              <ProtectedRoute allowedRoles={['REGISTRAR']}>
+                <AuthorityEKYC />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/authority/registry"
+            element={
+              <ProtectedRoute allowedRoles={['REGISTRAR']}>
+                <AuthorityRegistry />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route path="/citizen/book-appointment" element={<CitizenBookAppointment />} />
-        <Route path="/pages/citizen/book-appointment.html" element={<Navigate to="/citizen/book-appointment" replace />} />
+          {/* Government HQ Routes (Protected: GOVERNMENT_HQ) */}
+          <Route
+            path="/government/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['GOVERNMENT_HQ']}>
+                <GovernmentDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/government/analytics"
+            element={
+              <ProtectedRoute allowedRoles={['GOVERNMENT_HQ']}>
+                <GovernmentAnalytics />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/government/monitoring"
+            element={
+              <ProtectedRoute allowedRoles={['GOVERNMENT_HQ']}>
+                <GovernmentMonitoring />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/government/disputes"
+            element={
+              <ProtectedRoute allowedRoles={['GOVERNMENT_HQ']}>
+                <GovernmentDisputes />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route path="/citizen/download-registry" element={<CitizenDownloadRegistry />} />
-        <Route path="/pages/citizen/download-registry.html" element={<Navigate to="/citizen/download-registry" replace />} />
-
-        {/* Authority Portal Routes */}
-        <Route path="/authority/dashboard" element={<AuthorityDashboard />} />
-        <Route path="/pages/authority/dashboard.html" element={<Navigate to="/authority/dashboard" replace />} />
-
-        <Route path="/authority/verification" element={<AuthorityVerification />} />
-        <Route path="/pages/authority/verification.html" element={<Navigate to="/authority/verification" replace />} />
-
-        <Route path="/authority/ekyc" element={<AuthorityEKYC />} />
-        <Route path="/pages/authority/ekyc.html" element={<Navigate to="/authority/ekyc" replace />} />
-
-        <Route path="/authority/registry" element={<AuthorityRegistry />} />
-        <Route path="/pages/authority/registry.html" element={<Navigate to="/authority/registry" replace />} />
-
-        {/* Government HQ Routes */}
-        <Route path="/government/dashboard" element={<GovernmentDashboard />} />
-        <Route path="/pages/government/dashboard.html" element={<Navigate to="/government/dashboard" replace />} />
-
-        <Route path="/government/analytics" element={<GovernmentAnalytics />} />
-        <Route path="/pages/government/analytics.html" element={<Navigate to="/government/analytics" replace />} />
-
-        <Route path="/government/monitoring" element={<GovernmentMonitoring />} />
-        <Route path="/pages/government/monitoring.html" element={<Navigate to="/government/monitoring" replace />} />
-
-        <Route path="/government/disputes" element={<GovernmentDisputes />} />
-        <Route path="/pages/government/disputes.html" element={<Navigate to="/government/disputes" replace />} />
-
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

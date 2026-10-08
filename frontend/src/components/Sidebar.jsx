@@ -1,22 +1,63 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Sidebar({ portal = 'citizen' }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const handleLogout = (e) => {
     e.preventDefault();
     if (window.confirm('Are you sure you want to logout?')) {
+      logout();
       navigate('/auth/login');
     }
   };
 
-  const portalConfig = {
+  const portalDefaults = {
     citizen: {
       sub: 'Citizen Portal',
-      user: { avatar: 'RS', name: 'Ramesh Sharma', role: 'Citizen', badge: null },
+      name: 'Rajesh Kumar Singh',
+      role: 'Citizen',
+      badge: null,
+      avatar: 'RS',
+    },
+    authority: {
+      sub: 'Registrar Portal',
+      name: 'Ramesh Sharma',
+      role: 'Registrar, Sadar',
+      badge: 'REGISTRAR',
+      avatar: 'RS',
+    },
+    government: {
+      sub: 'HQ Portal',
+      name: 'Mukesh Kumar',
+      role: 'Joint Secretary',
+      badge: 'GOV HQ',
+      avatar: 'MK',
+    },
+  };
+
+  const currentPortal = portalDefaults[portal] || portalDefaults.citizen;
+
+  const displayName = user?.name || currentPortal.name;
+  const displayAvatar =
+    user?.avatar ||
+    (user?.name
+      ? user.name
+          .split(' ')
+          .map((n) => n[0])
+          .join('')
+          .slice(0, 2)
+          .toUpperCase()
+      : currentPortal.avatar);
+  const displayRole = user?.role === 'CITIZEN' ? 'Citizen' : currentPortal.role;
+  const displayBadge = user?.badge || currentPortal.badge;
+
+  const portalConfig = {
+    citizen: {
       sections: [
         {
           label: 'My Account',
@@ -35,15 +76,13 @@ export default function Sidebar({ portal = 'citizen' }) {
         {
           label: 'Account',
           links: [
-            { to: '#', label: 'Profile', onClick: (e) => { e.preventDefault(); alert('Profile modal / settings'); } },
+            { to: '#', label: 'Profile', onClick: (e) => { e.preventDefault(); alert('Profile settings'); } },
             { to: '/auth/login', label: 'Logout', onClick: handleLogout },
           ],
         },
       ],
     },
     authority: {
-      sub: 'Authority Portal',
-      user: { avatar: 'RS', name: 'Ramesh Sharma', role: 'Registrar, Sadar', badge: 'AUTHORITY' },
       sections: [
         {
           label: 'Overview',
@@ -69,8 +108,6 @@ export default function Sidebar({ portal = 'citizen' }) {
       ],
     },
     government: {
-      sub: 'HQ Portal',
-      user: { avatar: 'MK', name: 'Mukesh Kumar', role: 'Joint Secretary', badge: 'GOV HQ' },
       sections: [
         {
           label: 'Overview',
@@ -139,7 +176,7 @@ export default function Sidebar({ portal = 'citizen' }) {
                   B.H.U.M.I
                 </span>
                 <span className="text-[0.68rem] text-[#6E5D53] uppercase tracking-wider font-semibold">
-                  {current.sub}
+                  {currentPortal.sub}
                 </span>
               </div>
             )}
@@ -163,19 +200,19 @@ export default function Sidebar({ portal = 'citizen' }) {
         {/* User Card */}
         <div className="p-4 border-b border-[#D3CCC8] flex items-center gap-3 bg-[#D3CCC8]/30">
           <div className="w-[42px] h-[42px] rounded-full bg-gradient-to-br from-[#2B1B14] to-[#6E5D53] text-[#F8F2F0] font-bold flex items-center justify-center shrink-0 shadow-sm">
-            {current.user.avatar}
+            {displayAvatar}
           </div>
           {!collapsed && (
             <div className="flex flex-col min-w-0">
               <span className="text-[0.92rem] font-bold text-[#2B1B14] truncate">
-                {current.user.name}
+                {displayName}
               </span>
               <span className="text-[0.78rem] text-[#6E5D53] truncate">
-                {current.user.role}
+                {displayRole}
               </span>
-              {current.user.badge && (
+              {displayBadge && (
                 <span className="mt-1 inline-block text-[0.62rem] font-extrabold uppercase px-2 py-0.5 rounded-full bg-[#2B1B14]/10 border border-[#2B1B14]/20 text-[#2B1B14] w-fit">
-                  {current.user.badge}
+                  {displayBadge}
                 </span>
               )}
             </div>
