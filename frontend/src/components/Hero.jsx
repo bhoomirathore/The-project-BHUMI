@@ -24,7 +24,7 @@ export default function Hero() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 max-w-md sm:max-w-none">
             <button
-              onClick={() => navigate('/citizen/verify-land')}
+              onClick={() => navigate('/verify')}
               className="w-full sm:w-auto text-center justify-center bg-[#2B1B14] text-[#F8F2F0] border-none py-3.5 px-8 rounded-[8px] cursor-pointer text-[0.95rem] font-bold transition-all duration-200 shadow-sm hover:-translate-y-0.5 hover:shadow-md hover:bg-[#3D281F] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2B1B14] focus-visible:ring-offset-2"
             >
               Verify Your Land

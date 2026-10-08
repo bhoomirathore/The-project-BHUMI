@@ -17,7 +17,7 @@ export default function GovernmentDashboard() {
               State Land Revenue &amp; Governance HQ
             </h1>
             <p className="text-[#6E5D53] text-xs sm:text-sm mt-1">
-              Ministry of Land Resources | State Overview
+              State Overview (prototype)
             </p>
           </div>
           <div className="flex items-center gap-3 p-2 px-3 rounded-lg bg-[#E6DEDA] border border-[#D3CCC8] self-end sm:self-auto">

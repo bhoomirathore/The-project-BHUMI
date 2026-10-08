@@ -100,16 +100,17 @@ export default function Footer() {
         {/* Contact */}
         <div>
           <h4 className="text-[#2B1B14] mb-3 text-base font-bold">Contact</h4>
-          <ul className="list-none space-y-2 text-sm text-[#6E5D53]">
-            <li className="py-0.5">Email: info@b.h.u.m.i.gov.in</li>
-            <li className="py-0.5">Phone: 1800-XXX-XXXX</li>
-            <li className="py-0.5">Ministry of Land Resources</li>
-          </ul>
+          <p className="text-sm text-[#6E5D53] leading-relaxed">
+            For support or enquiries, please use the feedback option within your portal after signing in.
+          </p>
+          <p className="mt-3 text-[0.72rem] text-[#7A6B63] leading-relaxed">
+            This is a prototype system for demonstration purposes only. It does not represent an official government service.
+          </p>
         </div>
       </div>
 
       <div className="text-center pt-6 border-t border-[#D3CCC8] text-[#7A6B63] text-xs">
-        <p>&copy; 2024 B.H.U.M.I. All rights reserved. Government of India</p>
+        <p>&copy; 2026 B.H.U.M.I. Prototype. All rights reserved.</p>
       </div>
     </footer>
   );
