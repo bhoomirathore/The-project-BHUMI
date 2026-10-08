@@ -17,6 +17,7 @@ import CitizenBookAppointment from './pages/citizen/BookAppointment';
 import CitizenDownloadRegistry from './pages/citizen/DownloadRegistry';
 
 import AuthorityDashboard from './pages/authority/Dashboard';
+import AuthorityApplicationQueue from './pages/authority/ApplicationQueue';
 import AuthorityVerification from './pages/authority/Verification';
 import AuthorityEKYC from './pages/authority/EKYC';
 import AuthorityRegistry from './pages/authority/Registry';
@@ -118,12 +119,24 @@ export default function App() {
             }
           />
           <Route
-            path="/authority/verification"
+            path="/authority/applications"
+            element={
+              <ProtectedRoute allowedRoles={['REGISTRAR']}>
+                <AuthorityApplicationQueue />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/authority/applications/:id"
             element={
               <ProtectedRoute allowedRoles={['REGISTRAR']}>
                 <AuthorityVerification />
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/authority/verification"
+            element={<Navigate to="/authority/applications" replace />}
           />
           <Route
             path="/authority/ekyc"

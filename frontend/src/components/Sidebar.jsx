@@ -101,9 +101,9 @@ export default function Sidebar({ portal = 'citizen' }) {
         {
           label: 'Operations',
           links: [
-            { to: '/authority/verification', label: 'Document Verification' },
-            { to: '/authority/ekyc', label: 'eKYC Processing' },
-            { to: '/authority/registry', label: 'Registry & Mutation' },
+            { to: '/authority/applications', label: 'Applications' },
+            { to: '/authority/ekyc', label: 'KYC Status' },
+            { to: '/authority/registry', label: 'Transactions' },
           ],
         },
         {
