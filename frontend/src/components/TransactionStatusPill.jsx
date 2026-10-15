@@ -1,13 +1,23 @@
 import React from 'react';
+import { CheckCircle2, Clock, XCircle, Info, Circle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import {
   getApplicationStatusMeta,
   getTransactionStatusMeta,
   getKycStatusMeta,
   getPaymentStatusMeta,
-  STATUS_PILL_STYLES,
 } from '../utils/statuses';
 
-export default function TransactionStatusPill({ status, type = 'application', className = '' }) {
+const VARIANT_ICON = {
+  success: CheckCircle2,
+  warning: Clock,
+  error: XCircle,
+  info: Info,
+  neutral: Circle,
+};
+
+export default function TransactionStatusPill({ status, type = 'application', className = '', showIcon = true }) {
   if (!status) return null;
 
   let meta;
@@ -21,13 +31,15 @@ export default function TransactionStatusPill({ status, type = 'application', cl
     meta = getApplicationStatusMeta(status);
   }
 
-  const styleClass = STATUS_PILL_STYLES[meta.variant] || STATUS_PILL_STYLES.neutral;
+  const Icon = VARIANT_ICON[meta.variant] || Circle;
+  const pulsing = meta.variant === 'warning' && type === 'blockchain';
 
   return (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 text-xs font-bold rounded-full transition-colors ${styleClass} ${className}`}
-    >
+    <Badge variant={meta.variant} className={cn('whitespace-nowrap font-bold', className)}>
+      {showIcon && (
+        <Icon className={cn('h-3 w-3', pulsing && 'animate-pulse')} aria-hidden="true" />
+      )}
       {meta.label}
-    </span>
+    </Badge>
   );
 }

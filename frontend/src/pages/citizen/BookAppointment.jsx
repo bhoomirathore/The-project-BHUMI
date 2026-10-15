@@ -1,9 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import Sidebar from '../../components/Sidebar';
+import { motion } from 'framer-motion';
+import { ArrowRight, CalendarCheck2, CalendarDays, Clock, Loader2, Building2, FileText } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '../../hooks/useAuth';
 import applicationService from '../../services/applicationService';
 import appointmentService from '../../services/appointmentService';
+import AppShell from '@/components/layout/AppShell';
+import PageHeader from '@/components/common/PageHeader';
+import EmptyState from '@/components/common/EmptyState';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { cn } from '@/lib/utils';
 
 export default function CitizenBookAppointment() {
   const { user } = useAuth();
@@ -17,9 +40,10 @@ export default function CitizenBookAppointment() {
   const [date, setDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState('10:00 AM');
   const [loading, setLoading] = useState(true);
-  const [successMsg, setSuccessMsg] = useState('');
+  const [booked, setBooked] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const offices = appointmentService.getOffices();
   const slots = ['10:00 AM', '11:30 AM', '02:00 PM', '04:00 PM'];
@@ -48,10 +72,10 @@ export default function CitizenBookAppointment() {
   const selectedApp = applications.find((a) => a.id === selectedAppId);
   const existingAppointment = selectedApp?.appointment;
 
-  const handleSubmit = async (e) => {
+  // Validate, then open confirmation dialog
+  const handleSubmit = (e) => {
     e.preventDefault();
     setErrorMsg('');
-    setSuccessMsg('');
 
     if (!selectedAppId) {
       setErrorMsg('Please select a transfer application.');
@@ -63,6 +87,11 @@ export default function CitizenBookAppointment() {
       return;
     }
 
+    setConfirmOpen(true);
+  };
+
+  const confirmBooking = async () => {
+    setConfirmOpen(false);
     setSubmitting(true);
     try {
       await appointmentService.bookAppointment(selectedAppId, {
@@ -80,188 +109,233 @@ export default function CitizenBookAppointment() {
         )
       );
 
-      setSuccessMsg('Appointment booked successfully! Your Sub-Registrar slot has been confirmed.');
+      setBooked(true);
+      toast.success('Appointment booked successfully! Your Sub-Registrar slot has been confirmed.');
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to book appointment.');
+      const msg = err.message || 'Failed to book appointment.';
+      setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F2F0] text-[#2B1B14] flex">
-      <Sidebar portal="citizen" />
+    <AppShell portal="citizen">
+      <PageHeader
+        eyebrow="Citizen Portal"
+        title="Book Sub-Registrar Appointment"
+        description="Schedule an in-person physical deed verification slot with the local Sub-Registrar Office"
+      />
 
-      <main className="flex-1 md:ml-[280px] p-4 sm:p-6 md:p-8 lg:p-10 pt-16 md:pt-8 max-w-full overflow-x-hidden">
-        <header className="pb-6 sm:pb-8 border-b border-[#D3CCC8] mb-6 sm:mb-8">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#2B1B14]">
-            Book Sub-Registrar Appointment
-          </h1>
-          <p className="text-[#6E5D53] text-xs sm:text-sm mt-1">
-            Schedule an in-person physical deed verification slot with the local Sub-Registrar Office
-          </p>
-        </header>
-
-        {successMsg && (
-          <div className="mb-6 max-w-[800px] p-4 rounded-xl bg-[#10B981]/15 border border-[#10B981]/30 text-[#047857] text-xs font-semibold animate-fade-in flex justify-between items-center">
-            <span>{successMsg}</span>
-            <button
-              onClick={() => navigate(`/citizen/applications/${selectedAppId}`)}
-              className="py-1 px-3 bg-[#047857] text-white rounded text-xs ml-4"
-            >
-              View Application &rarr;
-            </button>
-          </div>
-        )}
-
-        {errorMsg && (
-          <div className="mb-6 max-w-[800px] p-4 rounded-xl bg-[#DC2626]/10 border border-[#DC2626]/20 text-[#DC2626] text-xs font-semibold">
-            {errorMsg}
-          </div>
-        )}
-
-        <section className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 sm:p-8 max-w-[800px] shadow-sm">
-          {loading ? (
-            <div className="p-6 text-center text-xs text-[#6E5D53]">Loading your applications...</div>
-          ) : applications.length === 0 ? (
-            <div className="text-xs text-[#6E5D53]">
-              <p>You have no active transfer applications to schedule an appointment for.</p>
-              <button
-                onClick={() => navigate('/citizen/new-transfer')}
-                className="mt-4 py-2 px-4 bg-[#2B1B14] text-white text-xs font-bold rounded-lg"
-              >
-                Create Transfer Application &rarr;
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-              {/* Application Selector */}
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-[#2B1B14]">
-                  Select Application *
-                </label>
-                <select
-                  value={selectedAppId}
-                  onChange={(e) => {
-                    setSelectedAppId(e.target.value);
-                    setSuccessMsg('');
-                    setErrorMsg('');
-                  }}
-                  className="w-full p-3 bg-[#F8F2F0] border border-[#D3CCC8] rounded-lg text-[#2B1B14] text-sm focus:outline-none focus:border-[#2B1B14]"
-                >
-                  {applications.map((app) => (
-                    <option key={app.id} value={app.id}>
-                      {app.id} · Parcel {app.propertyId} ({app.applicationStatus})
-                      {app.appointment ? ' [Appointment Booked]' : ' [Pending Slot]'}
-                    </option>
-                  ))}
-                </select>
+      <div className="max-w-[800px]">
+        {loading ? (
+          <Card className="shadow-card">
+            <CardContent className="space-y-4 p-6">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-9 w-full" />
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
               </div>
-
-              {/* If already has appointment, show read-only */}
-              {existingAppointment ? (
-                <div className="p-5 bg-[#F8F2F0] rounded-xl border border-[#D3CCC8] flex flex-col gap-3">
-                  <div className="flex justify-between items-center pb-2 border-b border-[#D3CCC8]">
-                    <span className="font-bold text-sm text-[#2B1B14]">
-                      Appointment Already Scheduled
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#10B981]/15 text-[#047857] border border-[#10B981]/30">
-                      Confirmed Slot
-                    </span>
+            </CardContent>
+          </Card>
+        ) : applications.length === 0 ? (
+          <Card className="shadow-card">
+            <EmptyState
+              icon={FileText}
+              title="No applications to schedule"
+              description="You have no active transfer applications to schedule an appointment for."
+              action={
+                <Button onClick={() => navigate('/citizen/new-transfer')}>
+                  Create Transfer Application
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              }
+            />
+          </Card>
+        ) : booked && existingAppointment ? (
+          <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.35 }}>
+            <Card className="border-success/30 shadow-card">
+              <CardContent className="flex flex-col items-center p-8 text-center">
+                <div className="relative mb-4">
+                  <div className="absolute inset-0 animate-pulse-ring rounded-full bg-success/20" />
+                  <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-success/15 text-success-foreground">
+                    <CalendarCheck2 className="h-8 w-8" aria-hidden="true" />
                   </div>
-                  <div className="text-xs text-[#6E5D53] flex flex-col gap-1.5">
-                    <p>
-                      <strong className="text-[#2B1B14]">Office:</strong> {existingAppointment.office}
-                    </p>
-                    <p>
-                      <strong className="text-[#2B1B14]">Date:</strong> {existingAppointment.date}
-                    </p>
-                    <p>
-                      <strong className="text-[#2B1B14]">Time Slot:</strong> {existingAppointment.slot}
-                    </p>
-                  </div>
-                  <p className="text-[0.72rem] text-[#7A6B63] mt-1">
-                    Each application supports one official Sub-Registrar appointment. To review the case, navigate to application details.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/citizen/applications/${selectedAppId}`)}
-                    className="self-start mt-2 py-2 px-4 bg-[#2B1B14] text-[#F8F2F0] text-xs font-bold rounded-lg shadow"
-                  >
-                    View Application Detail &rarr;
-                  </button>
                 </div>
-              ) : (
-                <>
-                  {/* Office select */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-semibold text-[#2B1B14]">
-                      Sub-Registrar Office *
-                    </label>
-                    <select
-                      value={sroOffice}
-                      onChange={(e) => setSroOffice(e.target.value)}
-                      className="w-full p-3 bg-[#F8F2F0] border border-[#D3CCC8] rounded-lg text-[#2B1B14] text-sm focus:outline-none focus:border-[#2B1B14]"
-                    >
-                      {offices.map((off) => (
-                        <option key={off} value={off}>
-                          {off}
-                        </option>
-                      ))}
-                    </select>
+                <h2 className="text-lg font-bold">Appointment booked successfully!</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Your Sub-Registrar slot has been confirmed.</p>
+                <dl className="mt-6 grid w-full max-w-md grid-cols-1 gap-3 text-left text-xs sm:grid-cols-3">
+                  <div className="rounded-lg border bg-muted/30 p-3">
+                    <dt className="flex items-center gap-1 text-muted-foreground"><Building2 className="h-3.5 w-3.5" aria-hidden="true" /> Office</dt>
+                    <dd className="mt-1 font-semibold text-foreground">{existingAppointment.office}</dd>
                   </div>
-
-                  {/* Appointment Date */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-semibold text-[#2B1B14]">
-                      Appointment Date *
-                    </label>
-                    <input
-                      type="date"
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                      min="2026-01-01"
-                      required
-                      className="w-full p-3 bg-[#F8F2F0] border border-[#D3CCC8] rounded-lg text-[#2B1B14] text-sm focus:outline-none focus:border-[#2B1B14]"
-                    />
+                  <div className="rounded-lg border bg-muted/30 p-3">
+                    <dt className="flex items-center gap-1 text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" aria-hidden="true" /> Date</dt>
+                    <dd className="mt-1 font-mono font-semibold text-foreground">{existingAppointment.date}</dd>
                   </div>
-
-                  {/* Time Slots */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-semibold text-[#2B1B14]">
-                      Available Time Slots *
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-1">
-                      {slots.map((slot) => (
-                        <button
-                          key={slot}
-                          type="button"
-                          onClick={() => setSelectedSlot(slot)}
-                          className={`p-3 rounded-lg border text-xs sm:text-sm font-semibold transition-all text-center ${
-                            selectedSlot === slot
-                              ? 'border-[#2B1B14] text-[#2B1B14] bg-[#D3CCC8] shadow-sm'
-                              : 'border-[#D3CCC8] bg-[#F8F2F0] text-[#6E5D53] hover:border-[#2B1B14] hover:text-[#2B1B14]'
-                          }`}
-                        >
-                          {slot}
-                        </button>
-                      ))}
-                    </div>
+                  <div className="rounded-lg border bg-muted/30 p-3">
+                    <dt className="flex items-center gap-1 text-muted-foreground"><Clock className="h-3.5 w-3.5" aria-hidden="true" /> Slot</dt>
+                    <dd className="mt-1 font-mono font-semibold text-foreground">{existingAppointment.slot}</dd>
                   </div>
-
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="mt-2 p-3.5 bg-[#2B1B14] text-[#F8F2F0] font-bold text-sm rounded-lg shadow hover:bg-[#3D281F] transition-all disabled:opacity-50"
+                </dl>
+                <div className="mt-6 flex flex-wrap justify-center gap-2">
+                  <Button onClick={() => navigate(`/citizen/applications/${selectedAppId}`)}>
+                    View Application
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                  <Button variant="outline" onClick={() => navigate('/citizen/dashboard')}>Back to Dashboard</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ) : (
+          <Card className="shadow-card">
+            <CardHeader className="p-6 pb-2">
+              <CardTitle className="text-base">Appointment details</CardTitle>
+              <CardDescription>Pick the application, office, date and a time slot.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 pt-4">
+              <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
+                {/* Application selector */}
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="application">Select Application *</Label>
+                  <Select
+                    value={selectedAppId}
+                    onValueChange={(v) => {
+                      setSelectedAppId(v);
+                      setBooked(false);
+                      setErrorMsg('');
+                    }}
                   >
-                    {submitting ? 'Booking Slot...' : 'Confirm Appointment'}
-                  </button>
-                </>
-              )}
-            </form>
-          )}
-        </section>
-      </main>
-    </div>
+                    <SelectTrigger id="application" aria-label="Select application">
+                      <SelectValue placeholder="Choose an application" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {applications.map((app) => (
+                        <SelectItem key={app.id} value={app.id}>
+                          <span className="font-mono">{app.id}</span> · Parcel {app.propertyId} ({app.applicationStatus})
+                          {app.appointment ? ' [Appointment Booked]' : ' [Pending Slot]'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {existingAppointment ? (
+                  <div className="flex flex-col gap-3 rounded-xl border bg-muted/30 p-5">
+                    <div className="flex items-center justify-between border-b pb-2">
+                      <span className="text-sm font-bold text-foreground">Appointment Already Scheduled</span>
+                      <Badge variant="success">Confirmed Slot</Badge>
+                    </div>
+                    <dl className="flex flex-col gap-1.5 text-xs text-muted-foreground">
+                      <div className="flex gap-2"><dt className="font-semibold text-foreground">Office:</dt><dd>{existingAppointment.office}</dd></div>
+                      <div className="flex gap-2"><dt className="font-semibold text-foreground">Date:</dt><dd className="font-mono">{existingAppointment.date}</dd></div>
+                      <div className="flex gap-2"><dt className="font-semibold text-foreground">Time Slot:</dt><dd className="font-mono">{existingAppointment.slot}</dd></div>
+                    </dl>
+                    <p className="mt-1 text-[0.72rem] text-muted-foreground">
+                      Each application supports one official Sub-Registrar appointment. To review the case, navigate to application details.
+                    </p>
+                    <Button type="button" className="mt-2 self-start" onClick={() => navigate(`/citizen/applications/${selectedAppId}`)}>
+                      View Application Detail
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Office */}
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="office">Sub-Registrar Office *</Label>
+                      <Select value={sroOffice} onValueChange={setSroOffice}>
+                        <SelectTrigger id="office" aria-label="Sub-Registrar office">
+                          <SelectValue placeholder="Choose an office" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {offices.map((off) => (
+                            <SelectItem key={off} value={off}>{off}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Date */}
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="date">Appointment Date *</Label>
+                      <Input
+                        id="date"
+                        type="date"
+                        value={date}
+                        onChange={(e) => { setDate(e.target.value); setErrorMsg(''); }}
+                        min="2026-01-01"
+                        required
+                        aria-invalid={!!errorMsg && !date}
+                      />
+                      {errorMsg && (
+                        <p role="alert" className="text-xs text-destructive">{errorMsg}</p>
+                      )}
+                    </div>
+
+                    {/* Time slots */}
+                    <fieldset className="flex flex-col gap-2">
+                      <legend className="mb-2 text-sm font-medium">Available Time Slots *</legend>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        {slots.map((slot) => {
+                          const active = selectedSlot === slot;
+                          return (
+                            <Button
+                              key={slot}
+                              type="button"
+                              variant={active ? 'default' : 'outline'}
+                              aria-pressed={active}
+                              onClick={() => setSelectedSlot(slot)}
+                              className={cn('h-11 font-mono', active && 'ring-2 ring-primary/30')}
+                            >
+                              <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                              {slot}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </fieldset>
+
+                    <Button type="submit" size="lg" disabled={submitting} className="mt-2">
+                      {submitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                          Booking Slot...
+                        </>
+                      ) : (
+                        <>
+                          <CalendarCheck2 className="h-4 w-4" aria-hidden="true" />
+                          Confirm Appointment
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
+              </form>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm this appointment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Application <span className="font-mono">{selectedAppId}</span> at {sroOffice} on{' '}
+              <span className="font-mono">{date}</span>, {selectedSlot}. Each application supports one official appointment.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Go back</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmBooking}>Book slot</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </AppShell>
   );
 }

@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
+import { Loader2, Search, RotateCcw, MapPin, AlertCircle } from 'lucide-react';
 import { getStates, getDistricts, getTehsils } from '../api/mock/locations';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
 
 export default function VerifyLandForm({ onVerify, isLoading = false, onReset }) {
   const [state, setState] = useState('Uttar Pradesh');
@@ -8,13 +16,16 @@ export default function VerifyLandForm({ onVerify, isLoading = false, onReset })
   const [village, setVillage] = useState('');
   const [khasraNumber, setKhasraNumber] = useState('');
   const [error, setError] = useState('');
+  const [touched, setTouched] = useState({ village: false, khasra: false });
 
   const states = getStates();
   const districts = getDistricts(state);
   const tehsils = getTehsils(state, district);
 
-  const handleStateChange = (e) => {
-    const newState = e.target.value;
+  const villageInvalid = touched.village && !village.trim();
+  const khasraInvalid = touched.khasra && !khasraNumber.trim();
+
+  const handleStateChange = (newState) => {
     setState(newState);
     const newDistricts = getDistricts(newState);
     setDistrict(newDistricts[0] || '');
@@ -22,8 +33,7 @@ export default function VerifyLandForm({ onVerify, isLoading = false, onReset })
     setTehsil(newTehsils[0] || '');
   };
 
-  const handleDistrictChange = (e) => {
-    const newDist = e.target.value;
+  const handleDistrictChange = (newDist) => {
     setDistrict(newDist);
     const newTehsils = getTehsils(state, newDist);
     setTehsil(newTehsils[0] || '');
@@ -32,6 +42,7 @@ export default function VerifyLandForm({ onVerify, isLoading = false, onReset })
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
+    setTouched({ village: true, khasra: true });
 
     if (!village.trim() || !khasraNumber.trim()) {
       setError('Please provide Village and Khasra Number.');
@@ -51,136 +62,134 @@ export default function VerifyLandForm({ onVerify, isLoading = false, onReset })
     setVillage('');
     setKhasraNumber('');
     setError('');
+    setTouched({ village: false, khasra: false });
     if (onReset) onReset();
   };
 
   return (
-    <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 sm:p-8 shadow-sm">
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-[#2B1B14]">Land Verification Form</h2>
-        <p className="text-sm text-[#6E5D53] mt-1">
-          Verify land records directly against synchronized blockchain state
-        </p>
-      </div>
-
-      {error && (
-        <div className="mb-4 p-3 rounded-lg bg-[#DC2626]/10 border border-[#DC2626]/20 text-[#DC2626] text-xs font-semibold">
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="state" className="text-xs font-medium text-[#2B1B14]">
-              State *
-            </label>
-            <select
-              id="state"
-              value={state}
-              onChange={handleStateChange}
-              required
-              className="p-3 bg-[#F8F2F0] border border-[#D3CCC8] rounded-lg text-sm text-[#2B1B14] focus:outline-none focus:border-[#2B1B14]"
-            >
-              {states.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="district" className="text-xs font-medium text-[#2B1B14]">
-              District *
-            </label>
-            <select
-              id="district"
-              value={district}
-              onChange={handleDistrictChange}
-              required
-              className="p-3 bg-[#F8F2F0] border border-[#D3CCC8] rounded-lg text-sm text-[#2B1B14] focus:outline-none focus:border-[#2B1B14]"
-            >
-              {districts.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
+    <Card className="shadow-card">
+      <CardHeader>
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <MapPin className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div>
+            <CardTitle className="text-xl font-bold">Land Verification Form</CardTitle>
+            <CardDescription className="mt-1">
+              Verify land records directly against synchronized blockchain state
+            </CardDescription>
           </div>
         </div>
+      </CardHeader>
+      <CardContent>
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-xs font-semibold">{error}</AlertDescription>
+          </Alert>
+        )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="tehsil" className="text-xs font-medium text-[#2B1B14]">
-              Tehsil *
-            </label>
-            <select
-              id="tehsil"
-              value={tehsil}
-              onChange={(e) => setTehsil(e.target.value)}
-              required
-              className="p-3 bg-[#F8F2F0] border border-[#D3CCC8] rounded-lg text-sm text-[#2B1B14] focus:outline-none focus:border-[#2B1B14]"
-            >
-              {tehsils.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="state">State *</Label>
+              <Select value={state} onValueChange={handleStateChange}>
+                <SelectTrigger id="state" aria-label="State">
+                  <SelectValue placeholder="Select state" />
+                </SelectTrigger>
+                <SelectContent>
+                  {states.map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="district">District *</Label>
+              <Select value={district} onValueChange={handleDistrictChange}>
+                <SelectTrigger id="district" aria-label="District">
+                  <SelectValue placeholder="Select district" />
+                </SelectTrigger>
+                <SelectContent>
+                  {districts.map((d) => (
+                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="tehsil">Tehsil *</Label>
+              <Select value={tehsil} onValueChange={setTehsil}>
+                <SelectTrigger id="tehsil" aria-label="Tehsil">
+                  <SelectValue placeholder="Select tehsil" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tehsils.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="village">Village *</Label>
+              <Input
+                type="text"
+                id="village"
+                value={village}
+                onChange={(e) => setVillage(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, village: true }))}
+                placeholder="e.g., Rampur, Shyampur"
+                aria-invalid={villageInvalid}
+                aria-describedby={villageInvalid ? 'village-error' : undefined}
+                required
+                className={cn(villageInvalid && 'border-destructive focus-visible:ring-destructive')}
+              />
+              {villageInvalid && (
+                <p id="village-error" className="text-xs text-destructive">Village is required.</p>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="village" className="text-xs font-medium text-[#2B1B14]">
-              Village *
-            </label>
-            <input
+            <Label htmlFor="khasra">Khasra Number *</Label>
+            <Input
               type="text"
-              id="village"
-              value={village}
-              onChange={(e) => setVillage(e.target.value)}
-              placeholder="e.g., Rampur, Shyampur"
+              id="khasra"
+              value={khasraNumber}
+              onChange={(e) => setKhasraNumber(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, khasra: true }))}
+              placeholder="e.g., 123/1, 456/2"
+              aria-invalid={khasraInvalid}
+              aria-describedby={khasraInvalid ? 'khasra-error' : 'khasra-hint'}
               required
-              className="p-3 bg-[#F8F2F0] border border-[#D3CCC8] rounded-lg text-sm text-[#2B1B14] focus:outline-none focus:border-[#2B1B14]"
+              className={cn('font-mono', khasraInvalid && 'border-destructive focus-visible:ring-destructive')}
             />
+            {khasraInvalid ? (
+              <p id="khasra-error" className="text-xs text-destructive">Khasra number is required.</p>
+            ) : (
+              <p id="khasra-hint" className="text-xs text-muted-foreground">
+                Khasra numbers are unique within a village revenue boundary
+              </p>
+            )}
           </div>
-        </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="khasra" className="text-xs font-medium text-[#2B1B14]">
-            Khasra Number *
-          </label>
-          <input
-            type="text"
-            id="khasra"
-            value={khasraNumber}
-            onChange={(e) => setKhasraNumber(e.target.value)}
-            placeholder="e.g., 123/1, 456/2"
-            required
-            className="p-3 bg-[#F8F2F0] border border-[#D3CCC8] rounded-lg text-sm text-[#2B1B14] focus:outline-none focus:border-[#2B1B14]"
-          />
-          <small className="text-[0.7rem] text-[#7A6B63]">
-            Khasra numbers are unique within a village revenue boundary
-          </small>
-        </div>
-
-        <div className="flex gap-4 mt-4">
-          <button
-            type="button"
-            onClick={handleResetForm}
-            className="py-3 px-6 bg-transparent border border-[#D3CCC8] hover:border-[#2B1B14] text-sm font-semibold text-[#2B1B14] rounded-lg transition-colors"
-          >
-            Reset Form
-          </button>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="flex-1 py-3 px-6 bg-[#2B1B14] text-[#F8F2F0] font-bold text-sm rounded-lg shadow hover:bg-[#3D281F] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {isLoading ? 'Verifying Records...' : 'Verify Now'}
-          </button>
-        </div>
-      </form>
-    </div>
+          <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row">
+            <Button type="button" variant="outline" onClick={handleResetForm} disabled={isLoading}>
+              <RotateCcw />
+              Reset Form
+            </Button>
+            <Button type="submit" disabled={isLoading} className="flex-1 font-bold">
+              {isLoading ? <Loader2 className="animate-spin" /> : <Search />}
+              {isLoading ? 'Verifying Records...' : 'Verify Now'}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

@@ -1,4 +1,7 @@
 import React from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { Check, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const STEPS = [
   { id: 'submitted', label: 'Submitted' },
@@ -10,12 +13,7 @@ const STEPS = [
   { id: 'completed', label: 'Completed' },
 ];
 
-export default function MutationStepper({
-  applicationStatus = 'SUBMITTED',
-  blockchainStatus = null,
-  className = '',
-}) {
-  // Determine the active step index (0 to 6) and error state
+function deriveState(applicationStatus, blockchainStatus) {
   let currentStepIndex = 0;
   let isFailed = false;
   let failureMessage = '';
@@ -56,114 +54,150 @@ export default function MutationStepper({
     currentStepIndex = 0;
   }
 
+  return { currentStepIndex, isFailed, failureMessage };
+}
+
+function StepCircle({ idx, isCompleted, isCurrent, isStepError, size = 'md' }) {
+  const dim = size === 'md' ? 'h-9 w-9 text-xs' : 'h-7 w-7 text-[0.7rem]';
+  const icon = size === 'md' ? 'h-4 w-4' : 'h-3.5 w-3.5';
+
   return (
-    <div className={`w-full bg-[#F8F2F0] border border-[#D3CCC8] rounded-xl p-4 sm:p-6 ${className}`}>
-      {/* Desktop View: Horizontal Stepper */}
-      <div className="hidden md:flex items-center justify-between relative">
+    <motion.div
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ duration: 0.3, delay: idx * 0.05, ease: [0.22, 1, 0.36, 1] }}
+      className={cn(
+        'relative flex shrink-0 items-center justify-center rounded-full border-2 font-bold transition-colors',
+        dim,
+        isStepError
+          ? 'border-destructive bg-destructive text-destructive-foreground'
+          : isCompleted
+          ? 'border-success bg-success text-primary-foreground'
+          : isCurrent
+          ? 'border-primary bg-primary text-primary-foreground'
+          : 'border-border bg-card text-muted-foreground'
+      )}
+      aria-current={isCurrent ? 'step' : undefined}
+    >
+      {isCurrent && !isStepError && (
+        <span className="absolute inset-0 animate-pulse-ring rounded-full bg-primary/30" aria-hidden="true" />
+      )}
+      {isStepError ? (
+        <X className={icon} aria-hidden="true" />
+      ) : isCompleted ? (
+        <Check className={icon} strokeWidth={3} aria-hidden="true" />
+      ) : isCurrent ? (
+        <span className="relative h-2.5 w-2.5 rounded-full bg-primary-foreground" aria-hidden="true">
+          <span className="absolute inset-0 animate-ping rounded-full bg-primary-foreground/80" />
+        </span>
+      ) : (
+        <span className="relative">{idx + 1}</span>
+      )}
+    </motion.div>
+  );
+}
+
+function Connector({ filled, failed, vertical, idx }) {
+  const reduce = useReducedMotion();
+  return (
+    <div
+      className={cn(
+        'relative overflow-hidden rounded-full bg-border',
+        vertical ? 'ml-[13px] h-6 w-0.5' : 'mx-2 mt-[17px] h-0.5 flex-1'
+      )}
+      aria-hidden="true"
+    >
+      <motion.div
+        initial={reduce ? false : vertical ? { scaleY: 0 } : { scaleX: 0 }}
+        animate={filled ? { scaleX: 1, scaleY: 1 } : vertical ? { scaleY: 0 } : { scaleX: 0 }}
+        transition={{ duration: 0.45, delay: 0.1 + idx * 0.08, ease: 'easeOut' }}
+        style={{ transformOrigin: vertical ? 'top' : 'left' }}
+        className={cn('absolute inset-0 rounded-full', failed ? 'bg-destructive' : 'bg-success')}
+      />
+    </div>
+  );
+}
+
+export default function MutationStepper({
+  applicationStatus = 'SUBMITTED',
+  blockchainStatus = null,
+  className = '',
+}) {
+  const { currentStepIndex, isFailed, failureMessage } = deriveState(applicationStatus, blockchainStatus);
+
+  const flags = (idx) => {
+    const isCompleted = idx < currentStepIndex || (idx === currentStepIndex && applicationStatus === 'COMPLETED');
+    const isCurrent = idx === currentStepIndex && applicationStatus !== 'COMPLETED';
+    const isStepError = isCurrent && isFailed;
+    return { isCompleted, isCurrent, isStepError };
+  };
+
+  const labelClass = ({ isCompleted, isCurrent, isStepError }) =>
+    cn(
+      'leading-tight',
+      isStepError
+        ? 'font-bold text-destructive'
+        : isCompleted
+        ? 'font-semibold text-success-foreground'
+        : isCurrent
+        ? 'font-bold text-foreground'
+        : 'text-muted-foreground'
+    );
+
+  return (
+    <div className={cn('w-full rounded-xl border bg-card p-4 shadow-sm sm:p-6', className)}>
+      {/* Desktop: horizontal */}
+      <ol className="relative hidden items-start md:flex" aria-label="Mutation workflow progress">
         {STEPS.map((step, idx) => {
-          const isCompleted = idx < currentStepIndex || (idx === currentStepIndex && applicationStatus === 'COMPLETED');
-          const isCurrent = idx === currentStepIndex && applicationStatus !== 'COMPLETED';
-          const isStepError = isCurrent && isFailed;
-
-          let circleClass = 'bg-[#E6DEDA] border-2 border-[#D3CCC8] text-[#7A6B63]';
-          if (isStepError) {
-            circleClass = 'bg-[#DC2626] border-2 border-[#DC2626] text-white';
-          } else if (isCompleted) {
-            circleClass = 'bg-[#047857] border-2 border-[#047857] text-white';
-          } else if (isCurrent) {
-            circleClass = 'bg-[#2B1B14] border-2 border-[#2B1B14] text-[#F8F2F0] ring-4 ring-[#2B1B14]/10';
-          }
-
-          let labelColor = 'text-[#7A6B63]';
-          if (isStepError) {
-            labelColor = 'text-[#DC2626] font-bold';
-          } else if (isCompleted) {
-            labelColor = 'text-[#047857] font-semibold';
-          } else if (isCurrent) {
-            labelColor = 'text-[#2B1B14] font-bold';
-          }
-
+          const f = flags(idx);
           return (
             <React.Fragment key={step.id}>
-              <div className="flex flex-col items-center text-center z-10 max-w-[100px]">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${circleClass}`}
-                >
-                  {isStepError ? '✕' : isCompleted ? '✓' : idx + 1}
-                </div>
-                <span className={`text-[0.72rem] mt-2 leading-tight ${labelColor}`}>
-                  {step.label}
-                </span>
-                {isStepError && failureMessage && (
-                  <span className="text-[0.62rem] text-[#DC2626] mt-0.5 leading-none">
-                    {failureMessage}
-                  </span>
+              <li className="z-10 flex max-w-[110px] flex-col items-center text-center">
+                <StepCircle idx={idx} {...f} />
+                <span className={cn('mt-2 text-[0.72rem]', labelClass(f))}>{step.label}</span>
+                {f.isStepError && failureMessage && (
+                  <span className="mt-0.5 text-[0.62rem] leading-none text-destructive">{failureMessage}</span>
                 )}
-              </div>
-
+              </li>
               {idx < STEPS.length - 1 && (
-                <div
-                  className={`flex-1 h-0.5 -mt-5 transition-colors ${
-                    idx < currentStepIndex
-                      ? isFailed && idx === currentStepIndex - 1
-                        ? 'bg-[#DC2626]'
-                        : 'bg-[#047857]'
-                      : 'bg-[#D3CCC8]'
-                  }`}
+                <Connector
+                  idx={idx}
+                  filled={idx < currentStepIndex}
+                  failed={isFailed && idx === currentStepIndex - 1}
                 />
               )}
             </React.Fragment>
           );
         })}
-      </div>
+      </ol>
 
-      {/* Mobile View: Vertical Stepper */}
-      <div className="flex md:hidden flex-col gap-3">
+      {/* Mobile: vertical */}
+      <ol className="flex flex-col md:hidden" aria-label="Mutation workflow progress">
         {STEPS.map((step, idx) => {
-          const isCompleted = idx < currentStepIndex || (idx === currentStepIndex && applicationStatus === 'COMPLETED');
-          const isCurrent = idx === currentStepIndex && applicationStatus !== 'COMPLETED';
-          const isStepError = isCurrent && isFailed;
-
-          let circleClass = 'bg-[#E6DEDA] border border-[#D3CCC8] text-[#7A6B63]';
-          if (isStepError) {
-            circleClass = 'bg-[#DC2626] text-white';
-          } else if (isCompleted) {
-            circleClass = 'bg-[#047857] text-white';
-          } else if (isCurrent) {
-            circleClass = 'bg-[#2B1B14] text-[#F8F2F0]';
-          }
-
+          const f = flags(idx);
           return (
-            <div key={step.id} className="flex items-start gap-3">
-              <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-[0.7rem] font-bold shrink-0 mt-0.5 ${circleClass}`}
-              >
-                {isStepError ? '✕' : isCompleted ? '✓' : idx + 1}
+            <li key={step.id} className="flex flex-col">
+              <div className="flex items-center gap-3">
+                <StepCircle idx={idx} size="sm" {...f} />
+                <div className="flex flex-col">
+                  <span className={cn('text-xs', labelClass(f))}>{step.label}</span>
+                  {f.isStepError && failureMessage && (
+                    <span className="mt-0.5 text-[0.68rem] font-medium text-destructive">{failureMessage}</span>
+                  )}
+                </div>
               </div>
-              <div className="flex flex-col">
-                <span
-                  className={`text-xs ${
-                    isStepError
-                      ? 'text-[#DC2626] font-bold'
-                      : isCompleted
-                      ? 'text-[#047857] font-semibold'
-                      : isCurrent
-                      ? 'text-[#2B1B14] font-bold'
-                      : 'text-[#7A6B63]'
-                  }`}
-                >
-                  {step.label}
-                </span>
-                {isStepError && failureMessage && (
-                  <span className="text-[0.68rem] text-[#DC2626] mt-0.5 font-medium">
-                    {failureMessage}
-                  </span>
-                )}
-              </div>
-            </div>
+              {idx < STEPS.length - 1 && (
+                <Connector
+                  vertical
+                  idx={idx}
+                  filled={idx < currentStepIndex}
+                  failed={isFailed && idx === currentStepIndex - 1}
+                />
+              )}
+            </li>
           );
         })}
-      </div>
+      </ol>
     </div>
   );
 }

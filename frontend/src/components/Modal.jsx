@@ -1,59 +1,44 @@
-import React, { useEffect } from 'react';
+import React from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 
-export default function Modal({ isOpen, onClose, title, children, footer }) {
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose]);
+/**
+ * Backwards-compatible modal built on the shadcn Dialog.
+ * Props: isOpen, onClose, title, description?, children, footer?, size? ('sm'|'md'|'lg'|'xl')
+ */
+const SIZE = {
+  sm: 'sm:max-w-[420px]',
+  md: 'sm:max-w-[540px]',
+  lg: 'sm:max-w-[720px]',
+  xl: 'sm:max-w-[960px]',
+};
 
-  if (!isOpen) return null;
-
+export default function Modal({ isOpen, onClose, title, description, children, footer, size = 'md', className }) {
   return (
-    <div
-      className="fixed inset-0 z-[1100] flex items-center justify-center p-3 sm:p-4 bg-[#2B1B14]/50 backdrop-blur-sm transition-opacity"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-    >
-      <div
-        className="w-full max-w-[540px] max-h-[90vh] flex flex-col bg-[#E6DEDA] border border-[#D3CCC8] rounded-[20px] shadow-[0_20px_60px_rgba(43,27,20,0.12)] overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[#D3CCC8] bg-[#F8F2F0]/70 shrink-0">
-          <h3 id="modal-title" className="text-base sm:text-lg font-bold text-[#2B1B14]">
-            {title}
-          </h3>
-          <button
-            onClick={onClose}
-            aria-label="Close modal"
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-[#6E5D53] hover:text-[#2B1B14] hover:bg-[#D3CCC8]/50 transition-colors text-xl leading-none"
-          >
-            &times;
-          </button>
-        </div>
-
-        <div className="p-4 sm:p-6 text-[#2B1B14] overflow-y-auto flex-1">
-          {children}
-        </div>
-
+    <Dialog open={!!isOpen} onOpenChange={(open) => { if (!open) onClose?.(); }}>
+      <DialogContent className={cn('max-h-[90vh] gap-0 overflow-hidden p-0', SIZE[size] || SIZE.md, className)}>
+        <DialogHeader className="border-b bg-background/70 px-5 py-4 text-left">
+          <DialogTitle className="text-base font-bold sm:text-lg">{title}</DialogTitle>
+          {description ? (
+            <DialogDescription>{description}</DialogDescription>
+          ) : (
+            <DialogDescription className="sr-only">{title}</DialogDescription>
+          )}
+        </DialogHeader>
+        <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
         {footer && (
-          <div className="flex flex-wrap items-center justify-end gap-2.5 p-3 sm:p-4 border-t border-[#D3CCC8] bg-[#F8F2F0]/50 shrink-0">
+          <DialogFooter className="border-t bg-background/50 px-4 py-3 sm:justify-end">
             {footer}
-          </div>
+          </DialogFooter>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

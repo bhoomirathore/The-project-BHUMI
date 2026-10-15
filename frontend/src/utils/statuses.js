@@ -58,19 +58,13 @@ export const USER_ROLES = {
   GOVERNMENT_HQ: 'GOVERNMENT_HQ',
 };
 
-// Styling variant mapping to the design system:
-// success: bg-[#10B981]/15 text-[#047857] border-[#10B981]/30
-// warning: bg-[#F59E0B]/15 text-[#B45309] border-[#F59E0B]/30
-// error: bg-[#DC2626]/15 text-[#DC2626] border-[#DC2626]/30
-// info: bg-[#2563EB]/15 text-[#2563EB] border-[#2563EB]/30
-// neutral: bg-[#D3CCC8]/50 text-[#6E5D53] border-[#D3CCC8]
-
+// Styling variant mapping to the design tokens (see src/index.css)
 export const STATUS_PILL_STYLES = {
-  success: 'bg-[#10B981]/15 text-[#047857] border border-[#10B981]/30',
-  warning: 'bg-[#F59E0B]/15 text-[#B45309] border border-[#F59E0B]/30',
-  error: 'bg-[#DC2626]/15 text-[#DC2626] border border-[#DC2626]/30',
-  info: 'bg-[#2563EB]/15 text-[#2563EB] border border-[#2563EB]/30',
-  neutral: 'bg-[#D3CCC8]/50 text-[#6E5D53] border border-[#D3CCC8]',
+  success: 'bg-success/15 text-success-foreground border border-success/30',
+  warning: 'bg-warning/15 text-warning-foreground border border-warning/30',
+  error: 'bg-destructive/15 text-destructive border border-destructive/30',
+  info: 'bg-info/15 text-info-foreground border border-info/30',
+  neutral: 'bg-muted/50 text-muted-foreground border border-border',
 };
 
 export function getApplicationStatusMeta(status) {

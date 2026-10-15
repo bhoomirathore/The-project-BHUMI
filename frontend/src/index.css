@@ -2,47 +2,177 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------------------------------------------------------------------
+   B.H.U.M.I design tokens
+   Warm, institutional palette: cream backgrounds, deep cocoa text.
+   Light values map 1:1 to the original hex palette:
+     #F8F2F0 background · #E6DEDA card · #D3CCC8 border · #2B1B14 ink
+     #6E5D53 muted ink  · #7A6B63 faint ink
+--------------------------------------------------------------------------- */
 @layer base {
+  :root {
+    --background: 15 36% 96%;
+    --foreground: 18 37% 12%;
+
+    --card: 20 19% 88%;
+    --card-foreground: 18 37% 12%;
+
+    --popover: 15 36% 96%;
+    --popover-foreground: 18 37% 12%;
+
+    --primary: 18 37% 12%;
+    --primary-foreground: 15 36% 96%;
+
+    --secondary: 20 19% 88%;
+    --secondary-foreground: 18 37% 12%;
+
+    --muted: 22 11% 81%;
+    --muted-foreground: 22 14% 38%;
+
+    --accent: 22 11% 81%;
+    --accent-foreground: 18 37% 12%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 160 84% 39%;
+    --success-foreground: 161 94% 24%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 26 90% 37%;
+    --info: 221 83% 53%;
+    --info-foreground: 224 76% 40%;
+
+    --border: 22 11% 81%;
+    --input: 22 11% 81%;
+    --ring: 18 37% 12%;
+
+    --sidebar-background: 20 19% 88%;
+    --sidebar-foreground: 18 37% 12%;
+    --sidebar-border: 22 11% 81%;
+    --sidebar-accent: 22 11% 81%;
+
+    --shadow-color: 18 37% 12%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 20 28% 7%;
+    --foreground: 20 30% 93%;
+
+    --card: 20 22% 11%;
+    --card-foreground: 20 30% 93%;
+
+    --popover: 20 22% 10%;
+    --popover-foreground: 20 30% 93%;
+
+    --primary: 20 36% 93%;
+    --primary-foreground: 18 37% 10%;
+
+    --secondary: 20 18% 15%;
+    --secondary-foreground: 20 30% 93%;
+
+    --muted: 20 15% 18%;
+    --muted-foreground: 22 12% 66%;
+
+    --accent: 20 15% 19%;
+    --accent-foreground: 20 30% 93%;
+
+    --destructive: 0 62% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 160 70% 45%;
+    --success-foreground: 160 70% 70%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 40 95% 72%;
+    --info: 217 90% 62%;
+    --info-foreground: 217 95% 78%;
+
+    --border: 20 14% 22%;
+    --input: 20 14% 22%;
+    --ring: 20 36% 93%;
+
+    --sidebar-background: 20 22% 10%;
+    --sidebar-foreground: 20 30% 93%;
+    --sidebar-border: 20 14% 20%;
+    --sidebar-accent: 20 15% 17%;
+
+    --shadow-color: 0 0% 0%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
   html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
   }
 
   body {
-    background-color: #F8F2F0;
-    color: #2B1B14;
+    @apply bg-background text-foreground font-sans antialiased;
     overflow-x: hidden;
     min-height: 100vh;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
-  /* Accessible focus rings */
   :focus-visible {
-    outline: 2px solid #2B1B14;
-    outline-offset: 2px;
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 
-  /* Custom subtle scrollbar */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   ::-webkit-scrollbar-track {
-    background: #F8F2F0;
+    background: hsl(var(--background));
   }
   ::-webkit-scrollbar-thumb {
-    background: #D3CCC8;
+    background: hsl(var(--muted));
     border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #B8ADA7;
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.9);
+    color: hsl(var(--primary-foreground));
   }
 }
 
-/* Reduced motion preference */
+@layer components {
+  /* Shared page scaffolding -------------------------------------------- */
+  .page-container {
+    @apply mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8;
+  }
+
+  .section-title {
+    @apply text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl;
+  }
+
+  /* Interactive card: lifts on hover, subtle border highlight */
+  .card-interactive {
+    @apply transition-all duration-200 ease-out hover:-translate-y-1 hover:border-primary/30 hover:shadow-lift;
+  }
+
+  /* Faint dotted grid used behind hero / auth panels */
+  .bg-grid {
+    background-image: radial-gradient(hsl(var(--foreground) / 0.08) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  /* Skeleton shimmer */
+  .shimmer {
+    @apply relative overflow-hidden bg-muted/60;
+  }
+  .shimmer::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-background/60 to-transparent;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,

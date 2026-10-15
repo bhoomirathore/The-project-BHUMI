@@ -1,6 +1,45 @@
-import React, { useState } from 'react';
-import Sidebar from '../../components/Sidebar';
-import Modal from '../../components/Modal';
+import React, { useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import { toast } from 'sonner';
+import {
+  ArrowUpRight,
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  Copy,
+  Download,
+  FileWarning,
+  Gavel,
+  MapPin,
+  Scale,
+  Search,
+  SearchX,
+  Users,
+} from 'lucide-react';
+import AppShell from '@/components/layout/AppShell';
+import PageHeader from '@/components/common/PageHeader';
+import StatCard from '@/components/common/StatCard';
+import EmptyState from '@/components/common/EmptyState';
+import { staggerContainer, staggerItem } from '@/components/common/Reveal';
+import Modal from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { cn } from '@/lib/utils';
 
 const INITIAL_DISPUTES = [
   {
@@ -49,222 +88,374 @@ const INITIAL_DISPUTES = [
   },
 ];
 
+const STATUS_TABS = ['All', 'Active', 'Under Review', 'Resolved'];
+
+const STATUS_VARIANT = {
+  Resolved: 'success',
+  Active: 'error',
+  'Under Review': 'warning',
+};
+
+function StatusBadge({ status, className }) {
+  const Icon = status === 'Resolved' ? CheckCircle2 : status === 'Active' ? FileWarning : Clock;
+  return (
+    <Badge variant={STATUS_VARIANT[status] || 'neutral'} className={className}>
+      <Icon className="h-3 w-3" aria-hidden="true" />
+      {status}
+    </Badge>
+  );
+}
+
+function copyId(id) {
+  navigator.clipboard?.writeText(id);
+  toast.success('Copied');
+}
+
+/** Derive a simple case timeline from the dispute's current status. */
+function buildTimeline(item) {
+  const reviewed = item.status === 'Under Review' || item.status === 'Resolved';
+  const resolved = item.status === 'Resolved';
+  return [
+    { label: 'Dispute filed', detail: `Filed on ${item.filedDate} · ${item.district}`, done: true, icon: CalendarDays },
+    { label: 'Tribunal review', detail: reviewed ? 'Case under tribunal examination' : 'Awaiting tribunal allocation', done: reviewed, icon: Scale },
+    { label: 'Resolution', detail: resolved ? 'Marked RESOLVED on Tribunal Ledger' : 'Pending resolution', done: resolved, icon: CheckCircle2 },
+  ];
+}
+
 export default function GovernmentDisputes() {
   const [disputes, setDisputes] = useState(INITIAL_DISPUTES);
   const [filter, setFilter] = useState('All');
+  const [search, setSearch] = useState('');
   const [activeCase, setActiveCase] = useState(null);
+  const [confirm, setConfirm] = useState(null); // { type: 'resolve' | 'escalate', id }
 
-  const filtered = disputes.filter((d) => {
-    if (filter === 'All') return true;
-    return d.status.toLowerCase() === filter.toLowerCase();
-  });
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return disputes.filter((d) => {
+      const matchStatus = filter === 'All' || d.status.toLowerCase() === filter.toLowerCase();
+      const matchSearch =
+        !q ||
+        [d.id, d.khasra, d.district, d.complainant, d.respondent, d.category].some((v) => v.toLowerCase().includes(q));
+      return matchStatus && matchSearch;
+    });
+  }, [disputes, filter, search]);
+
+  const counts = useMemo(
+    () => STATUS_TABS.reduce((acc, t) => ({ ...acc, [t]: t === 'All' ? disputes.length : disputes.filter((d) => d.status === t).length }), {}),
+    [disputes]
+  );
 
   const handleResolveCase = (id) => {
-    setDisputes((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, status: 'Resolved' } : d))
-    );
-    alert(`Case ${id} marked as RESOLVED and updated on Tribunal Ledger.`);
+    setDisputes((prev) => prev.map((d) => (d.id === id ? { ...d, status: 'Resolved' } : d)));
+    toast.success(`Case ${id} marked as RESOLVED and updated on Tribunal Ledger.`);
     setActiveCase(null);
   };
 
   const handleEscalateCase = (id) => {
-    alert(`Case ${id} escalated to District Magistrate Revenue Tribunal.`);
+    toast.info(`Case ${id} escalated to District Magistrate Revenue Tribunal.`);
     setActiveCase(null);
   };
 
+  const handleExport = () => {
+    toast.info('Exporting disputes log as PDF/CSV...');
+  };
+
+  const confirmAction = () => {
+    if (!confirm) return;
+    if (confirm.type === 'resolve') handleResolveCase(confirm.id);
+    else handleEscalateCase(confirm.id);
+    setConfirm(null);
+  };
+
   return (
-    <div className="min-h-screen bg-[#F8F2F0] text-[#2B1B14] flex">
-      <Sidebar portal="government" />
+    <AppShell portal="government">
+      <PageHeader
+        eyebrow="Government HQ"
+        title="Dispute Management"
+        description="Monitor, escalate & resolve land disputes nationwide"
+        actions={
+          <Button onClick={handleExport}>
+            <Download aria-hidden="true" />
+            Export
+          </Button>
+        }
+      />
 
-      <main className="flex-1 md:ml-[280px] p-4 sm:p-6 md:p-8 lg:p-10 pt-16 md:pt-8 max-w-full overflow-x-hidden">
-        {/* Topbar */}
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 sm:pb-8 border-b border-[#D3CCC8] mb-6 sm:mb-8">
-          <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#2B1B14]">
-              Dispute Management
-            </h1>
-            <p className="text-[#6E5D53] text-xs sm:text-sm mt-1">
-              Monitor, escalate &amp; resolve land disputes nationwide
-            </p>
+      {/* Dispute KPIs */}
+      <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4" aria-label="Dispute KPIs">
+        <StatCard label="Total Disputes" value={4218} icon={Gavel} hint="FY 2024–25" delay={0} />
+        <StatCard
+          label="Active / Open"
+          value={1204}
+          icon={FileWarning}
+          tone="error"
+          hint={<span className="font-medium text-warning-foreground">Requires monitoring</span>}
+          delay={0.05}
+        />
+        <StatCard
+          label="Resolved"
+          value={2791}
+          icon={CheckCircle2}
+          tone="success"
+          hint={<span className="font-medium text-success-foreground">66.2% resolution rate</span>}
+          delay={0.1}
+        />
+        <StatCard
+          label="Avg Resolution Time"
+          value="42 Days"
+          icon={Clock}
+          tone="info"
+          hint={<span className="font-medium text-success-foreground">Fastest in South Zone</span>}
+          delay={0.15}
+        />
+      </section>
+
+      {/* Filters */}
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Tabs value={filter} onValueChange={setFilter}>
+          <div className="overflow-x-auto pb-1">
+            <TabsList>
+              {STATUS_TABS.map((tab) => (
+                <TabsTrigger key={tab} value={tab}>
+                  {tab}
+                  <span className="ml-1.5 font-mono text-[0.68rem] text-muted-foreground">{counts[tab]}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
           </div>
-          <button
-            onClick={() => alert('Exporting disputes log as PDF/CSV...')}
-            className="py-2 px-4 bg-[#2B1B14] hover:bg-[#3D281E] text-[#F8F2F0] font-bold text-xs rounded-lg shadow-sm hover:shadow transition-all self-end sm:self-auto"
-          >
-            ⬇ Export
-          </button>
-        </header>
-
-        {/* Dispute KPIs */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-          <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-5 shadow-sm">
-            <span className="text-xs font-semibold text-[#6E5D53]">Total Disputes</span>
-            <div className="text-2xl font-bold text-[#2B1B14] mt-1">4,218</div>
-            <span className="text-xs text-[#6E5D53] mt-1 block">FY 2024–25</span>
-          </div>
-
-          <div className="bg-[#E6DEDA] border border-[#DC2626]/30 rounded-xl p-5 shadow-sm">
-            <span className="text-xs font-semibold text-[#6E5D53]">Active / Open</span>
-            <div className="text-2xl font-bold text-[#DC2626] mt-1">1,204</div>
-            <span className="text-xs text-[#B45309] mt-1 block">Requires monitoring</span>
-          </div>
-
-          <div className="bg-[#E6DEDA] border border-[#10B981]/30 rounded-xl p-5 shadow-sm">
-            <span className="text-xs font-semibold text-[#6E5D53]">Resolved</span>
-            <div className="text-2xl font-bold text-[#047857] mt-1">2,791</div>
-            <span className="text-xs text-[#047857] mt-1 block">66.2% resolution rate</span>
-          </div>
-
-          <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-5 shadow-sm">
-            <span className="text-xs font-semibold text-[#6E5D53]">Avg Resolution Time</span>
-            <div className="text-2xl font-bold text-[#2B1B14] mt-1">42 Days</div>
-            <span className="text-xs text-[#047857] mt-1 block">Fastest in South Zone</span>
-          </div>
-        </section>
-
-        {/* Filter Tabs */}
-        <div className="flex gap-2 mb-6">
-          {['All', 'Active', 'Under Review', 'Resolved'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setFilter(tab)}
-              className={`py-1.5 px-4 rounded-lg text-xs font-semibold transition-all ${
-                filter === tab
-                  ? 'bg-[#2B1B14] text-[#F8F2F0] shadow-sm'
-                  : 'bg-[#E6DEDA] border border-[#D3CCC8] text-[#6E5D53] hover:text-[#2B1B14]'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
+        </Tabs>
+        <div className="relative w-full sm:max-w-xs">
+          <Label htmlFor="dispute-search" className="sr-only">
+            Search disputes
+          </Label>
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <Input
+            id="dispute-search"
+            type="search"
+            placeholder="Search case, khasra, party..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
         </div>
+      </div>
 
-        {/* Disputes Grid */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-          {filtered.map((item) => (
-            <div
-              key={item.id}
-              className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex justify-between items-center mb-3">
-                  <span className="font-mono text-xs font-bold text-[#2B1B14]">
-                    {item.id}
-                  </span>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                      item.status === 'Resolved'
-                        ? 'bg-[#10B981]/15 text-[#047857]'
-                        : item.status === 'Active'
-                        ? 'bg-[#DC2626]/15 text-[#DC2626]'
-                        : 'bg-[#F59E0B]/20 text-[#B45309]'
-                    }`}
-                  >
-                    {item.status}
-                  </span>
-                </div>
-
-                <h3 className="text-base font-bold text-[#2B1B14] mb-1">
-                  Khasra {item.khasra} · {item.district}
-                </h3>
-                <span className="inline-block text-[0.7rem] uppercase font-bold text-[#6E5D53] mb-3">
-                  {item.category}
-                </span>
-
-                <div className="text-xs text-[#6E5D53] flex flex-col gap-1 mb-3">
-                  <p>
-                    <strong className="text-[#2B1B14]">Parties:</strong> {item.complainant} vs{' '}
-                    {item.respondent}
-                  </p>
-                  <p>
-                    <strong className="text-[#2B1B14]">Filed:</strong> {item.filedDate}
-                  </p>
-                </div>
-
-                <p className="text-xs text-[#2B1B14] bg-[#F8F2F0] p-3 rounded-lg border border-[#D3CCC8]">
-                  {item.summary}
-                </p>
-              </div>
-
-              <div className="mt-5 pt-4 border-t border-[#D3CCC8] flex gap-2">
-                <button
-                  onClick={() => setActiveCase(item)}
-                  className="flex-1 py-2 px-3 bg-[#2B1B14] hover:bg-[#3D281E] text-[#F8F2F0] font-bold text-xs rounded-lg shadow-sm"
+      {/* Disputes Grid */}
+      <section className="mb-10" aria-label="Disputes">
+        {filtered.length === 0 ? (
+          <Card className="shadow-card">
+            <EmptyState
+              icon={SearchX}
+              title="No disputes found"
+              description="No cases match the current status filter or search term."
+              action={
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setFilter('All');
+                    setSearch('');
+                  }}
                 >
-                  Review Case
-                </button>
-                <button
-                  onClick={() => handleEscalateCase(item.id)}
-                  className="py-2 px-3 bg-[#F8F2F0] border border-[#D3CCC8] hover:border-[#2B1B14] text-[#2B1B14] text-xs font-semibold rounded-lg"
-                >
-                  Escalate
-                </button>
-              </div>
-            </div>
-          ))}
-        </section>
-      </main>
+                  Clear filters
+                </Button>
+              }
+            />
+          </Card>
+        ) : (
+          <motion.div
+            key={`${filter}-${search}`}
+            variants={staggerContainer}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-1 gap-5 md:grid-cols-2"
+          >
+            {filtered.map((item) => (
+              <motion.div key={item.id} variants={staggerItem} className="h-full">
+                <Card className="card-interactive flex h-full flex-col shadow-card">
+                  <CardContent className="flex flex-1 flex-col p-5 sm:p-6">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1 font-mono text-xs font-bold">
+                        {item.id}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={`Copy case ID ${item.id}`} onClick={() => copyId(item.id)}>
+                              <Copy className="h-3 w-3" aria-hidden="true" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Copy case ID</TooltipContent>
+                        </Tooltip>
+                      </span>
+                      <StatusBadge status={item.status} />
+                    </div>
+
+                    <h3 className="mb-1 text-base font-bold">
+                      Khasra {item.khasra} · {item.district}
+                    </h3>
+                    <span className="mb-3 inline-block text-[0.7rem] font-bold uppercase tracking-wide text-muted-foreground">
+                      {item.category}
+                    </span>
+
+                    <div className="mb-3 flex flex-col gap-1 text-xs text-muted-foreground">
+                      <p className="inline-flex items-center gap-1.5">
+                        <Users className="h-3.5 w-3.5" aria-hidden="true" />
+                        <strong className="text-foreground">Parties:</strong> {item.complainant} vs {item.respondent}
+                      </p>
+                      <p className="inline-flex items-center gap-1.5">
+                        <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+                        <strong className="text-foreground">Filed:</strong> {item.filedDate}
+                      </p>
+                    </div>
+
+                    <p className="rounded-lg border bg-muted/30 p-3 text-xs text-foreground">{item.summary}</p>
+
+                    <div className="mt-5 flex gap-2 border-t pt-4">
+                      <Button className="flex-1" size="sm" onClick={() => setActiveCase(item)}>
+                        Review Case
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => setConfirm({ type: 'escalate', id: item.id })}>
+                        Escalate
+                        <ArrowUpRight aria-hidden="true" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </section>
 
       {/* Case Review Modal */}
-      {activeCase && (
-        <Modal
-          isOpen={!!activeCase}
-          onClose={() => setActiveCase(null)}
-          title={`Tribunal Case Review - ${activeCase.id}`}
-          footer={
-            <div className="flex gap-2">
-              <button
-                onClick={() => setActiveCase(null)}
-                className="py-2 px-4 bg-[#F8F2F0] border border-[#D3CCC8] hover:bg-[#D3CCC8]/50 text-[#2B1B14] rounded-lg text-xs"
-              >
+      <Modal
+        isOpen={!!activeCase}
+        onClose={() => setActiveCase(null)}
+        title={activeCase ? `Tribunal Case Review - ${activeCase.id}` : ''}
+        description={activeCase ? `${activeCase.category} · Khasra ${activeCase.khasra}, ${activeCase.district}` : undefined}
+        size="lg"
+        footer={
+          activeCase && (
+            <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+              <Button variant="outline" onClick={() => setActiveCase(null)}>
                 Close
-              </button>
-              <button
-                onClick={() => handleEscalateCase(activeCase.id)}
-                className="py-2 px-4 bg-[#F59E0B] text-[#2B1B14] font-bold rounded-lg text-xs shadow-sm"
-              >
+              </Button>
+              <Button variant="secondary" onClick={() => setConfirm({ type: 'escalate', id: activeCase.id })}>
+                <ArrowUpRight aria-hidden="true" />
                 Escalate to DM Court
-              </button>
-              <button
-                onClick={() => handleResolveCase(activeCase.id)}
-                className="py-2 px-4 bg-[#10B981] text-white font-bold rounded-lg text-xs shadow-sm"
+              </Button>
+              <Button
+                onClick={() => setConfirm({ type: 'resolve', id: activeCase.id })}
+                disabled={activeCase.status === 'Resolved'}
               >
-                Resolve &amp; Close Case
-              </button>
+                <CheckCircle2 aria-hidden="true" />
+                Resolve & Close Case
+              </Button>
             </div>
-          }
-        >
-          <div className="flex flex-col gap-3 text-xs">
-            <div className="p-3 rounded-lg bg-[#F8F2F0] border border-[#D3CCC8] flex flex-col gap-1.5">
-              <div className="flex justify-between">
-                <span className="text-[#6E5D53]">Case Category:</span>
-                <span className="font-bold text-[#2B1B14]">{activeCase.category}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#6E5D53]">Parcel / Khasra:</span>
-                <span className="font-bold text-[#2B1B14]">{activeCase.khasra}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#6E5D53]">District:</span>
-                <span className="text-[#2B1B14]">{activeCase.district}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#6E5D53]">Complainant:</span>
-                <span className="text-[#2B1B14]">{activeCase.complainant}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#6E5D53]">Respondent:</span>
-                <span className="text-[#2B1B14]">{activeCase.respondent}</span>
-              </div>
+          )
+        }
+      >
+        {activeCase && (
+          <div className="flex flex-col gap-4 text-xs">
+            <div className="flex items-center justify-between">
+              <StatusBadge status={activeCase.status} />
+              <span className="inline-flex items-center gap-1 font-mono text-muted-foreground">
+                {activeCase.id}
+                <Button variant="ghost" size="icon" className="h-6 w-6" aria-label="Copy case ID" onClick={() => copyId(activeCase.id)}>
+                  <Copy className="h-3 w-3" aria-hidden="true" />
+                </Button>
+              </span>
             </div>
 
-            <div className="p-3 rounded-lg bg-[#F8F2F0] border border-[#D3CCC8]">
-              <strong className="text-[#2B1B14] block mb-1">Detailed Case Summary:</strong>
-              <p className="text-[#6E5D53] leading-relaxed">{activeCase.summary}</p>
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-2 rounded-lg border bg-muted/30 p-3 sm:grid-cols-2">
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted-foreground">Case Category:</dt>
+                <dd className="text-right font-bold">{activeCase.category}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted-foreground">Parcel / Khasra:</dt>
+                <dd className="text-right font-mono font-bold">{activeCase.khasra}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted-foreground">District:</dt>
+                <dd className="inline-flex items-center gap-1 text-right">
+                  <MapPin className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
+                  {activeCase.district}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted-foreground">Filed:</dt>
+                <dd className="text-right font-mono">{activeCase.filedDate}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted-foreground">Complainant:</dt>
+                <dd className="text-right">{activeCase.complainant}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted-foreground">Respondent:</dt>
+                <dd className="text-right">{activeCase.respondent}</dd>
+              </div>
+            </dl>
+
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <strong className="mb-1 block text-foreground">Detailed Case Summary:</strong>
+              <p className="leading-relaxed text-muted-foreground">{activeCase.summary}</p>
+            </div>
+
+            <div>
+              <strong className="mb-3 block text-foreground">Case Timeline</strong>
+              <ol className="relative ml-2 border-l pl-5">
+                {buildTimeline(activeCase).map((step, i) => {
+                  const Icon = step.icon;
+                  return (
+                    <li key={step.label} className={cn('pb-4 last:pb-0', !step.done && 'opacity-70')}>
+                      <span
+                        className={cn(
+                          'absolute -left-[11px] flex h-5 w-5 items-center justify-center rounded-full border bg-card',
+                          step.done ? 'border-success/30 bg-success/15 text-success-foreground' : 'text-muted-foreground'
+                        )}
+                        aria-hidden="true"
+                      >
+                        <Icon className="h-3 w-3" />
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-foreground">{step.label}</span>
+                        {step.done ? (
+                          <Badge variant="success" className="px-1.5 py-0 text-[0.6rem]">Done</Badge>
+                        ) : (
+                          <Badge variant="neutral" className="px-1.5 py-0 text-[0.6rem]">Pending</Badge>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-muted-foreground">{step.detail}</p>
+                      <span className="sr-only">Step {i + 1} of 3</span>
+                    </li>
+                  );
+                })}
+              </ol>
             </div>
           </div>
-        </Modal>
-      )}
-    </div>
+        )}
+      </Modal>
+
+      {/* Confirmation */}
+      <AlertDialog open={!!confirm} onOpenChange={(open) => { if (!open) setConfirm(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirm?.type === 'resolve' ? 'Resolve and close this case?' : 'Escalate this case?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirm?.type === 'resolve'
+                ? `Case ${confirm?.id} will be marked as RESOLVED and the change will be recorded on the Tribunal Ledger. This cannot be undone.`
+                : `Case ${confirm?.id} will be escalated to the District Magistrate Revenue Tribunal for adjudication.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmAction}>
+              {confirm?.type === 'resolve' ? 'Resolve & Close' : 'Escalate'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </AppShell>
   );
 }

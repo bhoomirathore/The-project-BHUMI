@@ -1,18 +1,29 @@
 import React from 'react';
+import { ShieldCheck, Landmark, User } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+
+const ROLE_META = {
+  GOVERNMENT_HQ: { text: 'GOV HQ', Icon: Landmark },
+  REGISTRAR: { text: 'REGISTRAR', Icon: ShieldCheck },
+  CITIZEN: { text: 'CITIZEN', Icon: User },
+};
 
 export default function RoleBadge({ role, className = '' }) {
   if (!role) return null;
-
-  let text = role;
-  if (role === 'GOVERNMENT_HQ') text = 'GOV HQ';
-  if (role === 'REGISTRAR') text = 'REGISTRAR';
-  if (role === 'CITIZEN') text = 'CITIZEN';
+  const meta = ROLE_META[role] || { text: role, Icon: User };
+  const { Icon } = meta;
 
   return (
-    <span
-      className={`inline-block text-[0.62rem] font-extrabold uppercase px-2 py-0.5 rounded-full bg-[#2B1B14]/10 border border-[#2B1B14]/20 text-[#2B1B14] w-fit ${className}`}
+    <Badge
+      variant="outline"
+      className={cn(
+        'w-fit border-primary/20 bg-primary/10 text-[0.62rem] font-extrabold uppercase tracking-wide text-primary',
+        className
+      )}
     >
-      {text}
-    </span>
+      <Icon className="h-3 w-3" aria-hidden="true" />
+      {meta.text}
+    </Badge>
   );
 }

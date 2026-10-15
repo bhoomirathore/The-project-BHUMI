@@ -1,10 +1,18 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Search, Lock, AlertCircle, X, SearchX, LogIn, ArrowRight } from 'lucide-react';
 import VerifyLandForm from '../components/VerifyLandForm';
 import VerifyLandResult from '../components/VerifyLandResult';
 import publicService from '../services/publicService';
+import BrandLogo from '@/components/common/BrandLogo';
+import ThemeToggle from '@/components/common/ThemeToggle';
+import EmptyState from '@/components/common/EmptyState';
+import Reveal from '@/components/common/Reveal';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function PublicVerify() {
   const [result, setResult] = useState(null);
@@ -39,105 +47,145 @@ export default function PublicVerify() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F2F0] text-[#2B1B14] flex flex-col">
-      <Navbar />
-
-      <main className="flex-1 max-w-[1100px] mx-auto w-full px-4 sm:px-6 lg:px-8 pt-28 sm:pt-32 pb-16">
-
-        {/* Page Header */}
-        <div className="mb-8 sm:mb-12">
-          <div className="inline-flex items-center gap-2 mb-4 px-3 py-1.5 rounded-full bg-[#E6DEDA] border border-[#D3CCC8] text-xs font-semibold text-[#6E5D53]">
-            <span>🔍</span>
-            <span>Public Land Records</span>
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      {/* Simple public top bar */}
+      <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="mx-auto flex h-16 w-full max-w-[1100px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+          <BrandLogo size="sm" subtitle="Public Verify" />
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/auth/login">
+                <LogIn />
+                Sign in
+              </Link>
+            </Button>
+            <ThemeToggle />
           </div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#2B1B14] mb-3 leading-tight">
+        </div>
+      </header>
+
+      <main className="mx-auto w-full max-w-[1100px] flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12 lg:px-8">
+        {/* Page header */}
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          className="mb-8 sm:mb-10"
+        >
+          <Badge variant="neutral" className="mb-4 gap-1.5 px-3 py-1.5">
+            <Search className="h-3.5 w-3.5" aria-hidden="true" />
+            Public Land Records
+          </Badge>
+          <h1 className="mb-3 text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl md:text-4xl">
             Verify Land Ownership
           </h1>
-          <p className="text-[#6E5D53] text-sm sm:text-base max-w-[640px] leading-relaxed">
+          <p className="max-w-[640px] text-sm leading-relaxed text-muted-foreground sm:text-base">
             Look up any land parcel using its revenue identifiers. Records are verified against
             confirmed blockchain state. This is a public, read-only service — no login required.
           </p>
-        </div>
+        </motion.div>
 
-        {/* Privacy Notice Banner */}
-        <div className="mb-8 p-4 rounded-xl bg-[#E6DEDA] border border-[#D3CCC8] flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <span className="text-lg shrink-0">🔒</span>
-          <div className="text-xs text-[#6E5D53] leading-relaxed">
-            <strong className="text-[#2B1B14]">Privacy Notice: </strong>
-            Personal information (owner name, contact, identity documents) is not disclosed on this
-            public page in compliance with applicable data protection obligations. To view masked
-            owner details, please{' '}
-            <Link to="/auth/login" className="text-[#2B1B14] font-semibold underline underline-offset-2 hover:opacity-75">
-              sign in as a registered citizen
-            </Link>
-            .
-          </div>
-        </div>
+        {/* Privacy notice */}
+        <Reveal className="mb-8">
+          <Alert className="border-info/30 bg-info/15 text-info-foreground [&>svg]:text-info-foreground">
+            <Lock className="h-4 w-4" />
+            <AlertDescription className="text-xs leading-relaxed text-muted-foreground">
+              <strong className="text-foreground">Privacy Notice: </strong>
+              Personal information (owner name, contact, identity documents) is not disclosed on this
+              public page in compliance with applicable data protection obligations. To view masked
+              owner details, please{' '}
+              <Link to="/auth/login" className="font-semibold text-foreground underline underline-offset-2 hover:opacity-75">
+                sign in as a registered citizen
+              </Link>
+              .
+            </AlertDescription>
+          </Alert>
+        </Reveal>
 
-        {/* Search Error Banner */}
-        {searchError && (
-          <div className="mb-6 p-4 rounded-xl bg-[#DC2626]/10 border border-[#DC2626]/30 text-[#DC2626] text-xs font-semibold flex justify-between items-center">
-            <span>⚠️ {searchError}</span>
-            <button
-              onClick={() => setSearchError('')}
-              className="ml-4 font-bold text-xs hover:opacity-75"
+        {/* Search error */}
+        <AnimatePresence>
+          {searchError && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-6"
             >
-              ✕
-            </button>
-          </div>
-        )}
+              <Alert variant="destructive" className="pr-12">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-xs font-semibold">{searchError}</AlertDescription>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSearchError('')}
+                  aria-label="Dismiss error"
+                  className="absolute right-2 top-2 h-7 w-7 text-destructive hover:text-destructive"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </Alert>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Verify Form */}
+        {/* Form */}
         <div className="mb-8">
-          <VerifyLandForm
-            onVerify={handleVerify}
-            isLoading={isLoading}
-            onReset={handleReset}
-          />
+          <VerifyLandForm onVerify={handleVerify} isLoading={isLoading} onReset={handleReset} />
         </div>
 
-        {/* Not Found Message */}
-        {notFound && !isLoading && (
-          <div className="mb-8 p-6 rounded-xl bg-[#E6DEDA] border border-[#D3CCC8] shadow-sm text-center">
-            <div className="text-3xl mb-3">🔎</div>
-            <h3 className="text-base font-bold text-[#2B1B14] mb-2">No Record Found</h3>
-            <p className="text-xs text-[#6E5D53] max-w-sm mx-auto leading-relaxed">
-              No land parcel matching the provided details was found in the registry. Please
-              double-check the State, District, Tehsil, Village, and Khasra Number.
-            </p>
-          </div>
-        )}
+        {/* Not found */}
+        <AnimatePresence>
+          {notFound && !isLoading && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="mb-8"
+            >
+              <Card className="shadow-card">
+                <EmptyState
+                  icon={SearchX}
+                  title="No Record Found"
+                  description="No land parcel matching the provided details was found in the registry. Please double-check the State, District, Tehsil, Village, and Khasra Number."
+                  action={
+                    <Button variant="outline" onClick={handleReset}>
+                      Try another search
+                    </Button>
+                  }
+                />
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Verification Result */}
-        {result && !isLoading && (
-          <VerifyLandResult
-            result={result}
-            isPublic={true}
-            onClose={handleReset}
-          />
-        )}
+        {/* Result */}
+        <VerifyLandResult result={!isLoading ? result : null} isPublic={true} onClose={handleReset} />
 
-        {/* Call to Action Footer */}
-        <div className="mt-10 p-6 sm:p-8 rounded-xl bg-[#E6DEDA] border border-[#D3CCC8] shadow-sm flex flex-col sm:flex-row gap-6 items-center justify-between">
-          <div>
-            <h3 className="font-bold text-[#2B1B14] text-base mb-1">
-              Own a registered property?
-            </h3>
-            <p className="text-xs text-[#6E5D53] max-w-sm leading-relaxed">
-              Citizens can sign in to initiate a land transfer application, track application
-              status, and download e-Registry certificates.
-            </p>
-          </div>
-          <Link
-            to="/auth/login"
-            className="shrink-0 py-2.5 px-6 bg-[#2B1B14] text-[#F8F2F0] font-bold text-sm rounded-lg shadow hover:bg-[#3D281F] transition-all"
-          >
-            Sign In &rarr;
-          </Link>
-        </div>
+        {/* CTA footer */}
+        <Reveal className="mt-10">
+          <Card className="shadow-card">
+            <CardContent className="flex flex-col items-start gap-6 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+              <div>
+                <h3 className="mb-1 text-base font-bold">Own a registered property?</h3>
+                <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
+                  Citizens can sign in to initiate a land transfer application, track application
+                  status, and download e-Registry certificates.
+                </p>
+              </div>
+              <Button asChild className="shrink-0 font-bold">
+                <Link to="/auth/login">
+                  Sign In
+                  <ArrowRight />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </Reveal>
       </main>
 
-      <Footer />
+      <footer className="border-t py-6 text-center text-xs text-muted-foreground">
+        B.H.U.M.I. prototype (not an official government service)
+      </footer>
     </div>
   );
 }

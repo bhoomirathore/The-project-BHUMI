@@ -1,5 +1,35 @@
-import React, { useState, useMemo } from 'react';
-import Sidebar from '../../components/Sidebar';
+import React, { useState, useMemo, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { toast } from 'sonner';
+import {
+  Activity,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Gauge,
+  MapPin,
+  RefreshCw,
+  Search,
+  SearchX,
+  ServerCog,
+  Timer,
+} from 'lucide-react';
+import AppShell from '@/components/layout/AppShell';
+import PageHeader from '@/components/common/PageHeader';
+import StatCard from '@/components/common/StatCard';
+import EmptyState from '@/components/common/EmptyState';
+import { staggerContainer, staggerItem } from '@/components/common/Reveal';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 const TEHSIL_DATA = [
   { name: 'Agra Sadar', district: 'Agra', registries: 8420, mutations: 3210, pending: 284, coverage: 97, status: 'active' },
@@ -22,11 +52,76 @@ const TEHSIL_DATA = [
   { name: 'Chhata', district: 'Mathura', registries: 2890, mutations: 980, pending: 340, coverage: 88, status: 'pending' },
 ];
 
+const DISTRICTS = ['Agra', 'Lucknow', 'Varanasi', 'Kanpur', 'Prayagraj', 'Mathura'];
+
+const STATUS_META = {
+  active: { label: 'Active', badge: 'success', dot: 'bg-success', live: true },
+  pending: { label: 'Pending', badge: 'warning', dot: 'bg-warning', live: false },
+  inactive: { label: 'Inactive', badge: 'error', dot: 'bg-destructive', live: false },
+};
+
+const coverageTone = (c) => (c >= 90 ? '[&>div]:bg-success' : c >= 75 ? '[&>div]:bg-info' : '[&>div]:bg-warning');
+
+function TehsilCard({ row }) {
+  const meta = STATUS_META[row.status];
+  return (
+    <motion.div variants={staggerItem} className="h-full">
+      <Card className="card-interactive h-full shadow-card">
+        <CardContent className="flex h-full flex-col gap-4 p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="truncate text-sm font-bold">{row.name}</h3>
+              <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <MapPin className="h-3 w-3" aria-hidden="true" />
+                {row.district}
+              </p>
+            </div>
+            <Badge variant={meta.badge} className="shrink-0">
+              <span className="relative flex h-2 w-2" aria-hidden="true">
+                {meta.live && <span className={cn('absolute inline-flex h-full w-full animate-ping rounded-full opacity-75', meta.dot)} />}
+                <span className={cn('relative inline-flex h-2 w-2 rounded-full', meta.dot)} />
+              </span>
+              {meta.label}
+            </Badge>
+          </div>
+
+          <dl className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-lg bg-muted/40 px-2 py-2">
+              <dt className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Registries</dt>
+              <dd className="font-mono text-sm font-bold">{row.registries.toLocaleString('en-IN')}</dd>
+            </div>
+            <div className="rounded-lg bg-muted/40 px-2 py-2">
+              <dt className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Mutations</dt>
+              <dd className="font-mono text-sm font-bold">{row.mutations.toLocaleString('en-IN')}</dd>
+            </div>
+            <div className={cn('rounded-lg px-2 py-2', row.pending > 400 ? 'bg-warning/15' : 'bg-muted/40')}>
+              <dt className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">Pending</dt>
+              <dd className={cn('font-mono text-sm font-bold', row.pending > 400 && 'text-warning-foreground')}>
+                {row.pending.toLocaleString('en-IN')}
+              </dd>
+            </div>
+          </dl>
+
+          <div className="mt-auto">
+            <div className="mb-1.5 flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Digitized Coverage</span>
+              <span className="font-mono font-semibold">{row.coverage}%</span>
+            </div>
+            <Progress value={row.coverage} className={cn('h-2 bg-muted', coverageTone(row.coverage))} aria-label={`${row.name} coverage ${row.coverage}%`} />
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
 export default function GovernmentMonitoring() {
   const [searchTerm, setSearchTerm] = useState('');
   const [districtFilter, setDistrictFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastSynced, setLastSynced] = useState(() => new Date());
   const perPage = 8;
 
   const filtered = useMemo(() => {
@@ -43,201 +138,218 @@ export default function GovernmentMonitoring() {
   const totalPages = Math.ceil(filtered.length / perPage) || 1;
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
+  const counts = useMemo(
+    () => ({
+      all: TEHSIL_DATA.length,
+      active: TEHSIL_DATA.filter((r) => r.status === 'active').length,
+      pending: TEHSIL_DATA.filter((r) => r.status === 'pending').length,
+      inactive: TEHSIL_DATA.filter((r) => r.status === 'inactive').length,
+    }),
+    []
+  );
+
   const exportCSV = () => {
-    alert('Exporting Tehsil Monitoring data as CSV...');
+    toast.info('Exporting Tehsil Monitoring data as CSV...');
   };
 
+  const refresh = useCallback(() => {
+    if (refreshing) return;
+    setRefreshing(true);
+    // Static dataset: simulate a node poll so the UI reflects a fresh sync timestamp.
+    window.setTimeout(() => {
+      setLastSynced(new Date());
+      setRefreshing(false);
+      toast.success('Monitoring data refreshed');
+    }, 700);
+  }, [refreshing]);
+
   return (
-    <div className="min-h-screen bg-[#F8F2F0] text-[#2B1B14] flex">
-      <Sidebar portal="government" />
-
-      <main className="flex-1 md:ml-[280px] p-4 sm:p-6 md:p-8 lg:p-10 pt-16 md:pt-8 max-w-full overflow-x-hidden">
-        {/* Topbar */}
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 sm:pb-8 border-b border-[#D3CCC8] mb-6 sm:mb-8">
-          <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#2B1B14]">
-              Registry Monitoring
-            </h1>
-            <p className="text-[#6E5D53] text-xs sm:text-sm mt-1">
-              Real-time tehsil &amp; block-wise tracking
-            </p>
-          </div>
-          <div className="flex items-center gap-3 self-end sm:self-auto">
-            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#10B981]/15 border border-[#10B981]/30 text-[#047857] text-xs font-bold">
-              <span className="w-2 h-2 rounded-full bg-[#047857] animate-pulse" />
+    <AppShell portal="government">
+      <PageHeader
+        eyebrow="Government HQ"
+        title="Registry Monitoring"
+        description="Real-time tehsil & block-wise tracking"
+        actions={
+          <>
+            <Badge variant="success" className="h-9 px-3">
+              <span className="relative flex h-2 w-2" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+              </span>
               LIVE
-            </span>
-            <button
-              onClick={exportCSV}
-              className="py-2 px-4 bg-[#2B1B14] text-[#F8F2F0] font-bold text-xs rounded-lg shadow hover:bg-[#2B1B14]/90 transition-all"
-            >
-              ⬇ Export CSV
-            </button>
-          </div>
-        </header>
+            </Badge>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" onClick={refresh} disabled={refreshing} aria-label="Refresh monitoring data">
+                  <RefreshCw className={cn(refreshing && 'animate-spin')} aria-hidden="true" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Refresh</TooltipContent>
+            </Tooltip>
+            <Button onClick={exportCSV}>
+              <Download aria-hidden="true" />
+              Export CSV
+            </Button>
+          </>
+        }
+      />
 
-        {/* KPI Strip */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-          <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-5 shadow-sm">
-            <span className="text-xs font-semibold text-[#6E5D53]">Active Tehsils</span>
-            <div className="text-2xl font-bold text-[#2B1B14] mt-1">358 Nodes</div>
-            <span className="text-xs text-[#047857] font-medium mt-1 block">100% Online</span>
-          </div>
+      {/* KPI Strip */}
+      <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4" aria-label="Network KPIs">
+        <StatCard label="Active Tehsils" value="358 Nodes" icon={ServerCog} tone="success" hint="100% Online" delay={0} />
+        <StatCard label="Today's Registrations" value={1842} icon={Activity} tone="info" hint="Across state" delay={0.05} />
+        <StatCard label="Blockchain Latency" value="1.2 sec" icon={Timer} hint="Consensus Finality" delay={0.1} />
+        <StatCard label="Sync Status" value="Healthy" icon={Gauge} tone="success" hint="Block #10484" delay={0.15} />
+      </section>
 
-          <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-5 shadow-sm">
-            <span className="text-xs font-semibold text-[#6E5D53]">Today's Registrations</span>
-            <div className="text-2xl font-bold text-[#2B1B14] mt-1">1,842</div>
-            <span className="text-xs text-[#047857] font-medium mt-1 block">Across state</span>
-          </div>
-
-          <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-5 shadow-sm">
-            <span className="text-xs font-semibold text-[#6E5D53]">Blockchain Latency</span>
-            <div className="text-2xl font-bold text-[#2B1B14] mt-1">1.2 sec</div>
-            <span className="text-xs text-[#047857] font-medium mt-1 block">Consensus Finality</span>
-          </div>
-
-          <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-5 shadow-sm">
-            <span className="text-xs font-semibold text-[#6E5D53]">Sync Status</span>
-            <div className="text-2xl font-bold text-[#047857] mt-1">Healthy</div>
-            <span className="text-xs text-[#6E5D53] mt-1 block">Block #10484</span>
-          </div>
-        </section>
-
-        {/* Filter Controls */}
-        <section className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-5 shadow-sm mb-6 flex flex-wrap gap-4 items-center justify-between">
-          <input
-            type="text"
-            placeholder="Search tehsil or district..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setPage(1);
-            }}
-            className="p-2.5 bg-[#F8F2F0] border border-[#D3CCC8] rounded-lg text-xs text-[#2B1B14] placeholder-[#7A6B63] w-full sm:w-64 focus:outline-none focus:border-[#2B1B14]"
-          />
-
-          <div className="flex flex-wrap gap-3">
-            <select
-              value={districtFilter}
-              onChange={(e) => {
-                setDistrictFilter(e.target.value);
-                setPage(1);
-              }}
-              className="p-2.5 bg-[#F8F2F0] border border-[#D3CCC8] rounded-lg text-xs text-[#2B1B14] focus:outline-none focus:border-[#2B1B14]"
-            >
-              <option value="all">All Districts</option>
-              <option value="Agra">Agra</option>
-              <option value="Lucknow">Lucknow</option>
-              <option value="Varanasi">Varanasi</option>
-              <option value="Kanpur">Kanpur</option>
-              <option value="Prayagraj">Prayagraj</option>
-              <option value="Mathura">Mathura</option>
-            </select>
-
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-              className="p-2.5 bg-[#F8F2F0] border border-[#D3CCC8] rounded-lg text-xs text-[#2B1B14] focus:outline-none focus:border-[#2B1B14]"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-        </section>
-
-        {/* Tehsil Monitoring Table */}
-        <section className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl overflow-x-auto shadow-sm mb-6">
-          <table className="w-full text-left text-xs border-collapse min-w-[700px]">
-            <thead>
-              <tr className="border-b border-[#D3CCC8] bg-[#D3CCC8]/30 text-[#6E5D53]">
-                <th className="p-4 font-semibold">Tehsil</th>
-                <th className="p-4 font-semibold">District</th>
-                <th className="p-4 font-semibold">Registries</th>
-                <th className="p-4 font-semibold">Mutations</th>
-                <th className="p-4 font-semibold">Pending</th>
-                <th className="p-4 font-semibold">Digitized Coverage</th>
-                <th className="p-4 font-semibold">Node Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#D3CCC8] text-[#2B1B14]">
-              {paginated.map((row, idx) => (
-                <tr key={idx} className="hover:bg-[#D3CCC8]/30 transition-colors">
-                  <td className="p-4 font-bold text-[#2B1B14]">{row.name}</td>
-                  <td className="p-4 text-[#6E5D53]">{row.district}</td>
-                  <td className="p-4 font-mono">{row.registries.toLocaleString('en-IN')}</td>
-                  <td className="p-4 font-mono">{row.mutations.toLocaleString('en-IN')}</td>
-                  <td className={`p-4 font-mono ${row.pending > 400 ? 'text-[#B45309] font-bold' : 'text-inherit'}`}>
-                    {row.pending.toLocaleString('en-IN')}
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 h-2 bg-[#D3CCC8] rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${
-                            row.coverage >= 90
-                              ? 'bg-[#047857]'
-                              : row.coverage >= 75
-                              ? 'bg-[#2563EB]'
-                              : 'bg-[#B45309]'
-                          }`}
-                          style={{ width: `${row.coverage}%` }}
-                        />
-                      </div>
-                      <span className="font-semibold text-[0.7rem]">{row.coverage}%</span>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    {row.status === 'active' && (
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#10B981]/15 text-[#047857] font-bold">
-                        ● Active
-                      </span>
-                    )}
-                    {row.status === 'pending' && (
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#F59E0B]/15 text-[#B45309] font-bold">
-                        ● Pending
-                      </span>
-                    )}
-                    {row.status === 'inactive' && (
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#DC2626]/15 text-[#DC2626] font-bold">
-                        ● Inactive
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* Pagination */}
-          <div className="flex items-center justify-between p-4 border-t border-[#D3CCC8] bg-[#F8F2F0]/40">
-            <span className="text-xs text-[#6E5D53]">
-              Showing {filtered.length === 0 ? 0 : (page - 1) * perPage + 1} to{' '}
-              {Math.min(page * perPage, filtered.length)} of {filtered.length} tehsils
-            </span>
-            <div className="flex gap-2">
-              <button
-                disabled={page <= 1}
-                onClick={() => setPage(page - 1)}
-                className="py-1 px-3 rounded bg-[#F8F2F0] border border-[#D3CCC8] text-[#2B1B14] text-xs disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#D3CCC8]/40"
+      {/* Filter Controls */}
+      <Card className="mb-6 shadow-card">
+        <CardContent className="flex flex-col gap-4 p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full sm:max-w-xs">
+              <Label htmlFor="tehsil-search" className="sr-only">
+                Search tehsil or district
+              </Label>
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <Input
+                id="tehsil-search"
+                type="search"
+                placeholder="Search tehsil or district..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+                className="pl-9"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="district-filter" className="sr-only">
+                District
+              </Label>
+              <Select
+                value={districtFilter}
+                onValueChange={(v) => {
+                  setDistrictFilter(v);
+                  setPage(1);
+                }}
               >
-                Previous
-              </button>
-              <button
-                disabled={page >= totalPages}
-                onClick={() => setPage(page + 1)}
-                className="py-1 px-3 rounded bg-[#F8F2F0] border border-[#D3CCC8] text-[#2B1B14] text-xs disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#D3CCC8]/40"
-              >
-                Next
-              </button>
+                <SelectTrigger id="district-filter" className="w-full sm:w-[170px]" aria-label="Filter by district">
+                  <SelectValue placeholder="All Districts" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Districts</SelectItem>
+                  {DISTRICTS.map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {d}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        </section>
-      </main>
-    </div>
+
+          <Tabs
+            value={statusFilter}
+            onValueChange={(v) => {
+              setStatusFilter(v);
+              setPage(1);
+            }}
+          >
+            <div className="overflow-x-auto pb-1">
+              <TabsList>
+                <TabsTrigger value="all">
+                  All Status <span className="ml-1.5 font-mono text-[0.68rem] text-muted-foreground">{counts.all}</span>
+                </TabsTrigger>
+                <TabsTrigger value="active">
+                  Active <span className="ml-1.5 font-mono text-[0.68rem] text-muted-foreground">{counts.active}</span>
+                </TabsTrigger>
+                <TabsTrigger value="pending">
+                  Pending <span className="ml-1.5 font-mono text-[0.68rem] text-muted-foreground">{counts.pending}</span>
+                </TabsTrigger>
+                <TabsTrigger value="inactive">
+                  Inactive <span className="ml-1.5 font-mono text-[0.68rem] text-muted-foreground">{counts.inactive}</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Tehsil Health Grid */}
+      <section aria-label="Tehsil node health" aria-busy={refreshing}>
+        {refreshing ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: Math.max(paginated.length, 4) }).map((_, i) => (
+              <Card key={i} className="shadow-card">
+                <CardContent className="flex flex-col gap-4 p-5">
+                  <div className="flex justify-between">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                  <Skeleton className="h-14 w-full" />
+                  <Skeleton className="h-2 w-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : paginated.length === 0 ? (
+          <Card className="shadow-card">
+            <EmptyState
+              icon={SearchX}
+              title="No tehsils match"
+              description="Try a different search term or clear the district and status filters."
+              action={
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setDistrictFilter('all');
+                    setStatusFilter('all');
+                    setPage(1);
+                  }}
+                >
+                  Clear filters
+                </Button>
+              }
+            />
+          </Card>
+        ) : (
+          <motion.div
+            key={`${page}-${statusFilter}-${districtFilter}-${searchTerm}`}
+            variants={staggerContainer}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+          >
+            {paginated.map((row) => (
+              <TehsilCard key={row.name} row={row} />
+            ))}
+          </motion.div>
+        )}
+
+        {/* Pagination */}
+        <div className="mt-5 flex flex-col gap-3 rounded-xl border bg-card px-4 py-3 text-xs text-muted-foreground shadow-card sm:flex-row sm:items-center sm:justify-between">
+          <span>
+            Showing {filtered.length === 0 ? 0 : (page - 1) * perPage + 1} to{' '}
+            {Math.min(page * perPage, filtered.length)} of {filtered.length} tehsils
+            <span className="hidden sm:inline"> · Last synced {lastSynced.toLocaleTimeString('en-IN')}</span>
+          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+              <ChevronLeft aria-hidden="true" />
+              Previous
+            </Button>
+            <span className="font-mono">
+              {page} / {totalPages}
+            </span>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+              Next
+              <ChevronRight aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+      </section>
+    </AppShell>
   );
 }

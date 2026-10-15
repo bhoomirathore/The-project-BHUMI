@@ -1,116 +1,95 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { Globe, Mail, ArrowUp } from 'lucide-react';
+import BrandLogo from '@/components/common/BrandLogo';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+
+const QUICK = [
+  { href: '#about', label: 'About Us' },
+  { href: '#features', label: 'Features' },
+  { href: '#services', label: 'Services' },
+  { href: '#contact', label: 'Contact' },
+];
+const LEGAL = ['Privacy Policy', 'Terms of Service', 'Compliance', 'Support'];
 
 export default function Footer() {
-  const handleSmoothScroll = (e, targetId) => {
+  const scrollTo = (e, id) => {
     e.preventDefault();
-    const target = document.querySelector(targetId);
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    document.querySelector(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
-    <footer className="bg-[#E6DEDA] border-t border-[#D3CCC8] pt-12 sm:pt-14 px-4 sm:px-6 lg:px-8 pb-8 text-[#2B1B14]">
-      <div className="max-w-[1300px] mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10 mb-10">
-        {/* Brand Col */}
+    <footer className="border-t bg-card/60 px-4 pb-8 pt-12 sm:px-6 sm:pt-14 lg:px-8">
+      <div className="mx-auto mb-10 grid max-w-[1300px] grid-cols-1 gap-8 sm:grid-cols-2 sm:gap-10 lg:grid-cols-4">
         <div className="sm:col-span-2 lg:col-span-1">
-          <div className="flex items-center gap-3 mb-3.5 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <div className="w-[36px] h-[36px] bg-[#2B1B14] rounded-[8px] relative shadow-sm flex items-center justify-center shrink-0">
-              <div className="w-[14px] h-[14px] bg-[#F8F2F0] rounded-[3px]"></div>
-            </div>
-            <span className="text-xl font-bold tracking-[2px] text-[#2B1B14]">
-              B.H.U.M.I
-            </span>
+          <BrandLogo size="md" to={null} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="mb-3.5" />
+          <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">Revolutionizing land registry through blockchain technology.</p>
+          <div className="mt-4 flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" aria-label="Website" asChild>
+                  <a href="/" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Globe className="h-4 w-4" /></a>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Website</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" aria-label="Email" asChild>
+                  <a href="mailto:support@example.com"><Mail className="h-4 w-4" /></a>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Email</TooltipContent>
+            </Tooltip>
           </div>
-          <p className="text-[#6E5D53] text-sm leading-relaxed max-w-sm">
-            Revolutionizing land registry through blockchain technology.
-          </p>
         </div>
 
-        {/* Quick Links */}
         <div>
-          <h4 className="text-[#2B1B14] mb-3 text-base font-bold">Quick Links</h4>
-          <ul className="list-none space-y-2">
+          <h4 className="mb-3 text-base font-bold">Quick Links</h4>
+          <ul className="space-y-2" role="list">
+            {QUICK.map((q) => (
+              <li key={q.href}>
+                <a href={q.href} onClick={(e) => scrollTo(e, q.href)} className="inline-block py-0.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
+                  {q.label}
+                </a>
+              </li>
+            ))}
             <li>
-              <a
-                href="#about"
-                onClick={(e) => handleSmoothScroll(e, '#about')}
-                className="text-[#6E5D53] text-sm transition-colors duration-200 hover:text-[#2B1B14] inline-block py-0.5"
-              >
-                About Us
-              </a>
-            </li>
-            <li>
-              <a
-                href="#features"
-                onClick={(e) => handleSmoothScroll(e, '#features')}
-                className="text-[#6E5D53] text-sm transition-colors duration-200 hover:text-[#2B1B14] inline-block py-0.5"
-              >
-                Features
-              </a>
-            </li>
-            <li>
-              <a
-                href="#services"
-                onClick={(e) => handleSmoothScroll(e, '#services')}
-                className="text-[#6E5D53] text-sm transition-colors duration-200 hover:text-[#2B1B14] inline-block py-0.5"
-              >
-                Services
-              </a>
-            </li>
-            <li>
-              <a
-                href="#contact"
-                onClick={(e) => handleSmoothScroll(e, '#contact')}
-                className="text-[#6E5D53] text-sm transition-colors duration-200 hover:text-[#2B1B14] inline-block py-0.5"
-              >
-                Contact
-              </a>
+              <Link to="/verify" className="inline-block py-0.5 text-sm text-muted-foreground transition-colors hover:text-foreground">Public Verification</Link>
             </li>
           </ul>
         </div>
 
-        {/* Legal */}
         <div>
-          <h4 className="text-[#2B1B14] mb-3 text-base font-bold">Legal</h4>
-          <ul className="list-none space-y-2">
-            <li>
-              <a href="#" className="text-[#6E5D53] text-sm transition-colors duration-200 hover:text-[#2B1B14] inline-block py-0.5">
-                Privacy Policy
-              </a>
-            </li>
-            <li>
-              <a href="#" className="text-[#6E5D53] text-sm transition-colors duration-200 hover:text-[#2B1B14] inline-block py-0.5">
-                Terms of Service
-              </a>
-            </li>
-            <li>
-              <a href="#" className="text-[#6E5D53] text-sm transition-colors duration-200 hover:text-[#2B1B14] inline-block py-0.5">
-                Compliance
-              </a>
-            </li>
-            <li>
-              <a href="#" className="text-[#6E5D53] text-sm transition-colors duration-200 hover:text-[#2B1B14] inline-block py-0.5">
-                Support
-              </a>
-            </li>
+          <h4 className="mb-3 text-base font-bold">Legal</h4>
+          <ul className="space-y-2" role="list">
+            {LEGAL.map((l) => (
+              <li key={l}>
+                <a href="#" onClick={(e) => e.preventDefault()} className="inline-block py-0.5 text-sm text-muted-foreground transition-colors hover:text-foreground">{l}</a>
+              </li>
+            ))}
           </ul>
         </div>
 
-        {/* Contact */}
         <div>
-          <h4 className="text-[#2B1B14] mb-3 text-base font-bold">Contact</h4>
-          <p className="text-sm text-[#6E5D53] leading-relaxed">
+          <h4 className="mb-3 text-base font-bold">Contact</h4>
+          <p className="text-sm leading-relaxed text-muted-foreground">
             For support or enquiries, please use the feedback option within your portal after signing in.
           </p>
-          <p className="mt-3 text-[0.72rem] text-[#7A6B63] leading-relaxed">
+          <p className="mt-3 text-[0.72rem] leading-relaxed text-muted-foreground/80">
             This is a prototype system for demonstration purposes only. It does not represent an official government service.
           </p>
         </div>
       </div>
 
-      <div className="text-center pt-6 border-t border-[#D3CCC8] text-[#7A6B63] text-xs">
+      <Separator className="mx-auto max-w-[1300px]" />
+      <div className="mx-auto flex max-w-[1300px] flex-col items-center justify-between gap-3 pt-6 text-xs text-muted-foreground sm:flex-row">
         <p>&copy; 2026 B.H.U.M.I. Prototype. All rights reserved.</p>
+        <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          Back to top <ArrowUp className="h-3.5 w-3.5" />
+        </Button>
       </div>
     </footer>
   );

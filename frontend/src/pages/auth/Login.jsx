@@ -1,7 +1,47 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { toast } from 'sonner';
+import {
+  ShieldCheck,
+  Blocks,
+  FileCheck,
+  Eye,
+  EyeOff,
+  Loader2,
+  AlertCircle,
+  LogIn,
+  User,
+  Landmark,
+  Building2,
+  ArrowRight,
+} from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { isMockMode } from '../../api/client';
+import BrandLogo from '@/components/common/BrandLogo';
+import ThemeToggle from '@/components/common/ThemeToggle';
+import { staggerContainer, staggerItem } from '@/components/common/Reveal';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+
+const TRUST_POINTS = [
+  { icon: ShieldCheck, title: 'Tamper-proof records', text: 'Every title change is sealed with a cryptographic proof.' },
+  { icon: Blocks, title: 'Blockchain synchronized', text: 'Registry state mirrors the confirmed ledger in real time.' },
+  { icon: FileCheck, title: 'Verified e-Registry', text: 'Download certificates that anyone can independently verify.' },
+];
+
+// Mock login only matches on email; any password is accepted.
+const DEMO_ACCOUNTS = [
+  { role: 'Citizen', email: 'rajesh.singh@example.com', icon: User },
+  { role: 'Registrar', email: 'ramesh.sharma@example.com', icon: Landmark },
+  { role: 'HQ', email: 'mukesh.kumar@example.com', icon: Building2 },
+];
+const DEMO_PASSWORD = 'demo1234';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -36,140 +76,186 @@ export default function Login() {
     }
   };
 
+  const fillDemo = (acct) => {
+    setEmail(acct.email);
+    setPassword(DEMO_PASSWORD);
+    setError('');
+    toast.info(`${acct.role} demo credentials filled`, { description: acct.email });
+  };
+
   return (
-    <div className="min-h-screen bg-[#F8F2F0] flex items-center justify-center p-3 sm:p-4 md:p-6">
-      <div className="w-full max-w-[1200px] grid grid-cols-1 md:grid-cols-2 min-h-auto md:min-h-[720px] rounded-2xl overflow-hidden shadow-[0_15px_40px_rgba(43,27,20,0.08)] border border-[#D3CCC8]">
-        {/* Left Side (Desktop Only) */}
-        <div className="hidden md:flex bg-[#E6DEDA] border-r border-[#D3CCC8] p-12 lg:p-16 flex-col justify-center relative overflow-hidden text-[#2B1B14]">
+    <div className="relative flex min-h-screen items-center justify-center bg-background p-3 text-foreground sm:p-4 md:p-6">
+      <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
+        <ThemeToggle variant="outline" />
+      </div>
+
+      <div className="grid w-full max-w-[1200px] grid-cols-1 overflow-hidden rounded-2xl border bg-card shadow-card md:min-h-[720px] md:grid-cols-2">
+        {/* Left panel (desktop only) */}
+        <div className="bg-grid relative hidden flex-col justify-center overflow-hidden border-r bg-muted/40 p-12 md:flex lg:p-16">
+          <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 -right-16 h-72 w-72 rounded-full bg-primary/5 blur-3xl" />
+
           <div className="relative z-10">
-            <Link to="/" className="flex items-center gap-3.5 mb-8 group inline-flex">
-              <div className="w-[46px] h-[46px] bg-[#2B1B14] rounded-[10px] relative shadow-md flex items-center justify-center transition-transform group-hover:scale-105">
-                <div className="w-[18px] h-[18px] bg-[#E6DEDA] rounded-[4px]" />
-              </div>
-              <span className="text-2xl sm:text-3xl font-bold tracking-[2px] text-[#2B1B14]">
-                B.H.U.M.I
-              </span>
-            </Link>
-            <h1 className="text-3xl lg:text-4xl font-extrabold mb-4 leading-tight text-[#2B1B14]">
+            <BrandLogo size="lg" className="mb-8" />
+            <h1 className="mb-4 text-3xl font-extrabold leading-tight tracking-tight lg:text-4xl">
               Digital Land Registry System
             </h1>
-            <p className="text-lg text-[#6E5D53]">
+            <p className="mb-10 text-lg text-muted-foreground">
               Securing land rights through blockchain technology
             </p>
-          </div>
 
-          <div className="absolute inset-0 pointer-events-none opacity-20">
-            <div className="absolute top-[20%] left-[10%] text-6xl animate-float"></div>
-            <div className="absolute top-[60%] right-[15%] text-6xl animate-float [animation-delay:2s]"></div>
-            <div className="absolute bottom-[15%] left-[20%] text-6xl animate-float [animation-delay:4s]"></div>
+            <motion.ul
+              variants={staggerContainer}
+              initial="hidden"
+              animate="show"
+              className="flex flex-col gap-4"
+            >
+              {TRUST_POINTS.map(({ icon: Icon, title, text }) => (
+                <motion.li key={title} variants={staggerItem} className="flex items-start gap-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border bg-card text-primary shadow-sm">
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <span>
+                    <span className="block text-sm font-bold">{title}</span>
+                    <span className="block text-xs text-muted-foreground">{text}</span>
+                  </span>
+                </motion.li>
+              ))}
+            </motion.ul>
           </div>
         </div>
 
-        {/* Right Side / Mobile Form View */}
-        <div className="bg-[#F8F2F0] p-4 sm:p-8 md:p-10 lg:p-14 flex flex-col justify-center">
-          {/* Mobile Logo Header */}
-          <div className="md:hidden flex justify-center mb-6">
-            <Link to="/" className="flex items-center gap-3">
-              <div className="w-[40px] h-[40px] bg-[#2B1B14] rounded-[8px] relative shadow-sm flex items-center justify-center">
-                <div className="w-[16px] h-[16px] bg-[#E6DEDA] rounded-[3px]" />
-              </div>
-              <span className="text-2xl font-bold tracking-[2px] text-[#2B1B14]">
-                B.H.U.M.I
-              </span>
-            </Link>
+        {/* Right panel / form */}
+        <div className="flex flex-col justify-center bg-background p-4 sm:p-8 md:p-10 lg:p-14">
+          <div className="mb-6 flex justify-center md:hidden">
+            <BrandLogo size="md" />
           </div>
 
-          <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-[20px] sm:rounded-[24px] p-6 sm:p-8 md:p-10 shadow-[0_10px_30px_rgba(43,27,20,0.06)]">
-            <div className="text-center mb-6 sm:mb-8">
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#2B1B14] mb-1.5">Welcome Back</h2>
-              <p className="text-sm text-[#6E5D53]">Sign in to access your account</p>
-            </div>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+          >
+            <Card className="shadow-card">
+              <CardHeader className="items-center text-center">
+                <CardTitle className="text-2xl font-extrabold sm:text-3xl">Welcome Back</CardTitle>
+                <CardDescription>Sign in to access your account</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {error && (
+                  <Alert variant="destructive" className="mb-5">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-xs font-semibold">{error}</AlertDescription>
+                  </Alert>
+                )}
 
-            {error && (
-              <div className="mb-5 p-3 rounded-lg bg-[#DC2626]/10 border border-[#DC2626]/20 text-[#DC2626] text-xs font-semibold">
-                {error}
-              </div>
-            )}
+                <form onSubmit={handleLogin} className="flex flex-col gap-4 sm:gap-5">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input
+                      type="email"
+                      id="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="your.email@example.com"
+                      autoComplete="email"
+                      required
+                      className="h-11"
+                    />
+                  </div>
 
-            <form onSubmit={handleLogin} className="flex flex-col gap-4 sm:gap-5">
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="email" className="text-sm font-semibold text-[#2B1B14]">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your.email@example.com"
-                  required
-                  className="p-3 sm:p-3.5 bg-[#F8F2F0] border-2 border-[#D3CCC8] rounded-[10px] text-[#2B1B14] text-sm sm:text-base placeholder-[#7A6B63] focus:outline-none focus:border-[#2B1B14] focus:ring-2 focus:ring-[#2B1B14]/15 transition-all"
-                />
-              </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="password">Password</Label>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? 'text' : 'password'}
+                        id="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Enter your password"
+                        autoComplete="current-password"
+                        required
+                        className="h-11 pr-11"
+                      />
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setShowPassword((v) => !v)}
+                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            aria-pressed={showPassword}
+                            className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            {showPassword ? <EyeOff /> : <Eye />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{showPassword ? 'Hide password' : 'Show password'}</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="password" className="text-sm font-semibold text-[#2B1B14]">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    id="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    required
-                    className="w-full p-3 sm:p-3.5 pr-12 bg-[#F8F2F0] border-2 border-[#D3CCC8] rounded-[10px] text-[#2B1B14] text-sm sm:text-base placeholder-[#7A6B63] focus:outline-none focus:border-[#2B1B14] focus:ring-2 focus:ring-[#2B1B14]/15 transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#6E5D53] hover:text-[#2B1B14] text-xs sm:text-sm font-medium py-1 px-1.5"
-                  >
-                    {showPassword ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-              </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="remember"
+                      checked={remember}
+                      onCheckedChange={(v) => setRemember(v === true)}
+                    />
+                    <Label htmlFor="remember" className="cursor-pointer text-xs font-normal text-muted-foreground sm:text-sm">
+                      Remember me
+                    </Label>
+                  </div>
 
-              <div className="flex items-center text-xs sm:text-sm">
-                <label className="flex items-center gap-2 text-[#6E5D53] cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={remember}
-                    onChange={(e) => setRemember(e.target.checked)}
-                    className="w-4 h-4 accent-[#2B1B14] rounded cursor-pointer"
-                  />
-                  <span>Remember me</span>
-                </label>
-              </div>
+                  <Button type="submit" size="lg" disabled={loading} className="mt-1 w-full font-bold">
+                    {loading ? <Loader2 className="animate-spin" /> : <LogIn />}
+                    {loading ? 'Signing in...' : 'Sign In'}
+                  </Button>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="mt-1 p-3.5 bg-[#2B1B14] rounded-[10px] text-[#F8F2F0] text-sm sm:text-base font-bold cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:bg-[#3D281F] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2B1B14] focus-visible:ring-offset-2"
-              >
-                {loading ? 'Signing in...' : 'Sign In'}
-              </button>
+                  <div className="mt-2 text-center text-xs text-muted-foreground sm:text-sm">
+                    Don't have an account?{' '}
+                    <Link to="/auth/register" className="font-bold text-foreground underline-offset-4 hover:underline">
+                      Sign Up
+                    </Link>
+                  </div>
+                </form>
 
-              <div className="text-center mt-2 text-xs sm:text-sm text-[#6E5D53]">
-                Don't have an account?{' '}
-                <Link to="/auth/register" className="text-[#2B1B14] font-bold hover:underline">
-                  Sign Up
-                </Link>
-              </div>
-            </form>
+                {isMockMode() && (
+                  <div className="mt-5 rounded-lg border bg-muted/30 p-3">
+                    <div className="mb-2 text-[0.72rem] font-bold uppercase tracking-wider text-muted-foreground">
+                      Demo Accounts
+                    </div>
+                    <ul className="flex flex-col gap-1">
+                      {DEMO_ACCOUNTS.map((acct) => {
+                        const Icon = acct.icon;
+                        return (
+                          <li key={acct.email}>
+                            <button
+                              type="button"
+                              onClick={() => fillDemo(acct)}
+                              className="group flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            >
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                                <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                              </span>
+                              <span className="w-16 shrink-0 font-semibold">{acct.role}</span>
+                              <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground group-hover:text-foreground">
+                                {acct.email}
+                              </span>
+                              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true" />
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <p className="mt-2 text-[0.68rem] text-muted-foreground">Click a row to fill the form. Any password works in demo mode.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
 
-            {isMockMode() && (
-              <div className="mt-5 p-3 rounded-lg bg-[#F8F2F0] border border-[#D3CCC8] text-[0.72rem] text-[#7A6B63] leading-relaxed">
-                <span className="font-bold text-[#2B1B14] block mb-0.5">Demo Accounts:</span>
-                <div>Citizen: <span className="font-mono text-[#2B1B14]">rajesh.singh@example.com</span></div>
-                <div>Registrar: <span className="font-mono text-[#2B1B14]">ramesh.sharma@example.com</span></div>
-                <div>HQ: <span className="font-mono text-[#2B1B14]">mukesh.kumar@example.com</span></div>
-              </div>
-            )}
-          </div>
-
-          <div className="text-center mt-5 text-xs text-[#6E5D53]">
+          <div className="mt-5 text-center text-xs text-muted-foreground">
             B.H.U.M.I. prototype (not an official government service)
           </div>
         </div>

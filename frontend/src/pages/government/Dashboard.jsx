@@ -1,123 +1,228 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../../components/Sidebar';
+import { ArrowUpRight, Blocks, Building2, IndianRupee, Landmark, Radio, TrendingUp } from 'lucide-react';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import AppShell from '@/components/layout/AppShell';
+import PageHeader from '@/components/common/PageHeader';
+import Section from '@/components/common/Section';
+import StatCard from '@/components/common/StatCard';
+import Reveal from '@/components/common/Reveal';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+
+const REGIONS = [
+  { region: 'Pune Region', mutations: 1420, area: '84,200 Hectares', areaHa: 84200, health: '100% Operational' },
+  { region: 'Mumbai Metropolitan', mutations: 3890, area: '42,100 Hectares', areaHa: 42100, health: '100% Operational' },
+];
+
+function ChartTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border bg-popover p-2 text-xs text-popover-foreground shadow-lg">
+      <div className="mb-1 font-semibold">{label}</div>
+      {payload.map((p) => (
+        <div key={p.dataKey} className="flex items-center justify-between gap-4">
+          <span className="text-muted-foreground">{p.name}</span>
+          <span className="font-mono font-semibold">{Number(p.value).toLocaleString('en-IN')}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Trend({ children }) {
+  return (
+    <span className="inline-flex items-center gap-1 font-medium text-success-foreground">
+      <TrendingUp className="h-3 w-3" aria-hidden="true" />
+      {children}
+    </span>
+  );
+}
 
 export default function GovernmentDashboard() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-[#F8F2F0] text-[#2B1B14] flex">
-      <Sidebar portal="government" />
-
-      <main className="flex-1 md:ml-[280px] p-4 sm:p-6 md:p-8 lg:p-10 pt-16 md:pt-8 max-w-full overflow-x-hidden">
-        {/* Top Header */}
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 sm:pb-8 border-b border-[#D3CCC8] mb-6 sm:mb-8">
-          <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#2B1B14]">
-              State Land Revenue &amp; Governance HQ
-            </h1>
-            <p className="text-[#6E5D53] text-xs sm:text-sm mt-1">
-              State Overview (prototype)
-            </p>
-          </div>
-          <div className="flex items-center gap-3 p-2 px-3 rounded-lg bg-[#E6DEDA] border border-[#D3CCC8] self-end sm:self-auto">
-            <div className="w-8 h-8 rounded-full bg-[#2B1B14] text-[#F8F2F0] font-bold text-xs flex items-center justify-center">
-              HQ
+    <AppShell portal="government">
+      <PageHeader
+        eyebrow="Government HQ"
+        title="State Land Revenue & Governance HQ"
+        description="State Overview (prototype)"
+        actions={
+          <div className="flex items-center gap-3 rounded-lg border bg-muted/40 px-3 py-2">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground">HQ</AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col leading-tight">
+              <span className="text-xs font-bold text-foreground">Directorate of Land Records</span>
+              <span className="text-[0.68rem] text-muted-foreground">State Administrator</span>
             </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-[#2B1B14]">
-                Directorate of Land Records
+          </div>
+        }
+      />
+
+      {/* HQ Metrics Grid */}
+      <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4" aria-label="HQ metrics">
+        <StatCard
+          label="Total Land Digitized"
+          value="1.42 M"
+          icon={Landmark}
+          tone="success"
+          hint={<Trend>+12.4% vs last quarter</Trend>}
+          delay={0}
+        />
+        <StatCard
+          label="Blockchain Blocks"
+          value={10484}
+          icon={Blocks}
+          tone="info"
+          hint={<Trend>100% Immutable</Trend>}
+          delay={0.05}
+        />
+        <StatCard
+          label="Tehsils Online"
+          value="358 / 358"
+          icon={Radio}
+          tone="success"
+          hint={
+            <span className="inline-flex items-center gap-1.5 font-medium text-success-foreground">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
               </span>
-              <span className="text-[0.68rem] text-[#6E5D53]">State Administrator</span>
-            </div>
-          </div>
-        </header>
+              Fully Connected
+            </span>
+          }
+          delay={0.1}
+        />
+        <StatCard
+          label="Stamp Duty Revenue"
+          value="₹ 4,820 Cr"
+          icon={IndianRupee}
+          tone="warning"
+          hint={<Trend>+8.1% target met</Trend>}
+          delay={0.15}
+        />
+      </section>
 
-        {/* HQ Metrics Grid */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
-          <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm">
-            <span className="text-xs font-semibold text-[#6E5D53]">Total Land Digitized</span>
-            <div className="text-3xl font-extrabold text-[#2B1B14] mt-1">1.42 M</div>
-            <span className="text-xs text-[#047857] font-medium mt-1 block">↑ +12.4% vs last quarter</span>
-          </div>
+      {/* Regional Stream */}
+      <Section
+        title="Regional Land Transaction Stream"
+        description="Live mutation and registration activity across monitored regions"
+      >
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+          <Reveal className="lg:col-span-2">
+            <Card className="h-full shadow-card">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table className="min-w-[640px]">
+                    <TableHeader>
+                      <TableRow className="bg-muted/40 hover:bg-muted/40">
+                        <TableHead className="px-4">Region / District</TableHead>
+                        <TableHead className="px-4">Active Mutations</TableHead>
+                        <TableHead className="px-4">Total Registered Area</TableHead>
+                        <TableHead className="px-4">Validator Health</TableHead>
+                        <TableHead className="px-4 text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {REGIONS.map((row) => (
+                        <TableRow
+                          key={row.region}
+                          className="cursor-pointer hover:bg-muted/40"
+                          onClick={() => navigate('/government/analytics')}
+                        >
+                          <TableCell className="px-4 py-4 font-bold">
+                            <span className="inline-flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                              {row.region}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-4 py-4 font-mono">{row.mutations.toLocaleString('en-IN')}</TableCell>
+                          <TableCell className="px-4 py-4 font-mono">{row.area}</TableCell>
+                          <TableCell className="px-4 py-4">
+                            <Badge variant="success">
+                              <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
+                              {row.health}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-4 py-4 text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate('/government/analytics');
+                              }}
+                            >
+                              View Analytics
+                              <ArrowUpRight aria-hidden="true" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </Reveal>
 
-          <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm">
-            <span className="text-xs font-semibold text-[#6E5D53]">Blockchain Blocks</span>
-            <div className="text-3xl font-extrabold text-[#2B1B14] mt-1">10,484</div>
-            <span className="text-xs text-[#047857] font-medium mt-1 block">↑ 100% Immutable</span>
-          </div>
-
-          <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm">
-            <span className="text-xs font-semibold text-[#6E5D53]">Tehsils Online</span>
-            <div className="text-3xl font-extrabold text-[#2B1B14] mt-1">358 / 358</div>
-            <span className="text-xs text-[#047857] font-medium mt-1 block">● Fully Connected</span>
-          </div>
-
-          <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm">
-            <span className="text-xs font-semibold text-[#6E5D53]">Stamp Duty Revenue</span>
-            <div className="text-3xl font-extrabold text-[#2B1B14] mt-1">₹ 4,820 Cr</div>
-            <span className="text-xs text-[#047857] font-medium mt-1 block">↑ +8.1% target met</span>
-          </div>
-        </section>
-
-        {/* Regional Stream Table */}
-        <section className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm mb-10">
-          <h2 className="text-xl font-bold text-[#2B1B14] mb-5">
-            Regional Land Transaction Stream
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse min-w-[640px]">
-              <thead>
-                <tr className="border-b border-[#D3CCC8] bg-[#D3CCC8]/30 text-[#6E5D53]">
-                  <th className="p-4 font-semibold">Region / District</th>
-                  <th className="p-4 font-semibold">Active Mutations</th>
-                  <th className="p-4 font-semibold">Total Registered Area</th>
-                  <th className="p-4 font-semibold">Validator Health</th>
-                  <th className="p-4 font-semibold">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#D3CCC8] text-[#2B1B14]">
-                <tr>
-                  <td className="p-4 font-bold text-[#2B1B14]">Pune Region</td>
-                  <td className="p-4">1,420</td>
-                  <td className="p-4">84,200 Hectares</td>
-                  <td className="p-4">
-                    <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-[#10B981]/15 text-[#047857] border border-[#10B981]/30">
-                      100% Operational
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <button
-                      onClick={() => navigate('/government/analytics')}
-                      className="px-3 py-1.5 bg-transparent border border-[#D3CCC8] hover:border-[#2B1B14] rounded text-xs font-semibold transition-colors"
-                    >
-                      View Analytics
-                    </button>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="p-4 font-bold text-[#2B1B14]">Mumbai Metropolitan</td>
-                  <td className="p-4">3,890</td>
-                  <td className="p-4">42,100 Hectares</td>
-                  <td className="p-4">
-                    <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-[#10B981]/15 text-[#047857] border border-[#10B981]/30">
-                      100% Operational
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <button
-                      onClick={() => navigate('/government/analytics')}
-                      className="px-3 py-1.5 bg-transparent border border-[#D3CCC8] hover:border-[#2B1B14] rounded text-xs font-semibold transition-colors"
-                    >
-                      View Analytics
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </main>
-    </div>
+          <Reveal delay={0.1}>
+            <Card className="h-full shadow-card">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Active Mutations by Region</CardTitle>
+                <CardDescription>Mutations currently in progress</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[240px] pt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={REGIONS} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                    <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="region"
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                      tickLine={false}
+                      axisLine={{ stroke: 'hsl(var(--border))' }}
+                      tickFormatter={(v) => v.split(' ')[0]}
+                    />
+                    <YAxis
+                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <Tooltip content={<ChartTooltip />} cursor={{ fill: 'hsl(var(--muted) / 0.5)' }} />
+                    <Bar
+                      dataKey="mutations"
+                      name="Active Mutations"
+                      fill="hsl(var(--primary))"
+                      radius={[6, 6, 0, 0]}
+                      maxBarSize={56}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </Reveal>
+        </div>
+      </Section>
+    </AppShell>
   );
 }

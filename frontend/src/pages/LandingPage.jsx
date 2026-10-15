@@ -8,7 +8,7 @@ import Footer from '../components/Footer';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#F8F2F0] text-[#2B1B14] font-['Plus_Jakarta_Sans',system-ui,-apple-system,sans-serif] overflow-x-hidden relative">
+    <div className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
       <Navbar />
       <main className="w-full">
         <Hero />

@@ -1,16 +1,33 @@
-# React + Vite
+# B.H.U.M.I Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React 19 + Vite 6 + Tailwind CSS v3 + [shadcn/ui](https://ui.shadcn.com) (JavaScript, "new-york" style).
 
-Currently, two official plugins are available:
+## Scripts
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run build
+npm run preview
+```
 
-## React Compiler
+Copy `.env.example` to `.env`. `VITE_USE_MOCK=true` runs against the in-memory mock store.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## UI stack
 
-## Expanding the Oxlint configuration
+| Concern | Where |
+| --- | --- |
+| Design tokens (light + dark) | `src/index.css` (`:root` / `.dark` CSS variables), `tailwind.config.js` |
+| shadcn/ui primitives | `src/components/ui/*` — add more with `npx shadcn@latest add <name>` |
+| Shared app components | `src/components/common/*` (PageHeader, Section, StatCard, EmptyState, Reveal, AnimatedNumber, BrandLogo, ThemeToggle) |
+| Portal layout | `src/components/layout/AppShell.jsx` (sidebar + Ctrl/⌘ K command palette), `src/components/Sidebar.jsx` |
+| Navigation config | `src/config/navigation.js` |
+| Toasts | `import { toast } from 'sonner'` (`<Toaster/>` is mounted in `main.jsx`) |
+| Theme | `next-themes` with `attribute="class"`; toggle via `ThemeToggle` |
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+### Conventions
+
+- Use semantic colour classes (`bg-background`, `bg-card`, `text-muted-foreground`, `bg-primary text-primary-foreground`, status: `success` / `warning` / `info` / `destructive`). Do not hard-code hex colours so dark mode keeps working.
+- Wrap portal pages in `<AppShell portal="citizen|authority|government">` and start them with `<PageHeader />`.
+- Confirmations use `AlertDialog`; feedback uses `toast`; never `window.alert` / `window.confirm`.
+- Path alias `@/` points to `src/`.

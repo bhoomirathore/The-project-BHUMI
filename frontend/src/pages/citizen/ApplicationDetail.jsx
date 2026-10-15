@@ -1,6 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import Sidebar from '../../components/Sidebar';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Copy,
+  Check,
+  FileText,
+  Loader2,
+  ShieldCheck,
+  CreditCard,
+  CalendarClock,
+  Link2,
+  AlertTriangle,
+  Landmark,
+  Users,
+  SearchX,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import MutationStepper from '../../components/MutationStepper';
 import TransactionStatusPill from '../../components/TransactionStatusPill';
 import applicationService from '../../services/applicationService';
@@ -8,6 +24,24 @@ import kycService from '../../services/kycService';
 import paymentService from '../../services/paymentService';
 import propertyService from '../../services/propertyService';
 import { DOCUMENT_TYPE_LABELS } from '../../utils/statuses';
+import AppShell from '@/components/layout/AppShell';
+import PageHeader from '@/components/common/PageHeader';
+import EmptyState from '@/components/common/EmptyState';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+
+function Row({ label, children, last }) {
+  return (
+    <div className={`flex items-start justify-between gap-4 py-2 text-xs ${last ? '' : 'border-b'}`}>
+      <dt className="shrink-0 text-muted-foreground">{label}</dt>
+      <dd className="text-right text-foreground">{children}</dd>
+    </div>
+  );
+}
 
 export default function CitizenApplicationDetail() {
   const { id } = useParams();
@@ -18,7 +52,6 @@ export default function CitizenApplicationDetail() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [copiedHash, setCopiedHash] = useState(false);
-  const [notice, setNotice] = useState('');
 
   const loadData = async () => {
     try {
@@ -41,13 +74,12 @@ export default function CitizenApplicationDetail() {
 
   const handleStartKyc = async () => {
     setActionLoading(true);
-    setNotice('');
     try {
       const updated = await kycService.triggerMockKyc(application.id, 'VERIFIED');
       setApplication(updated);
-      setNotice('Mock Aadhaar KYC verification completed successfully.');
+      toast.success('Mock Aadhaar KYC verification completed successfully.');
     } catch (err) {
-      setNotice(err.message || 'Mock KYC failed.');
+      toast.error(err.message || 'Mock KYC failed.');
     } finally {
       setActionLoading(false);
     }
@@ -55,13 +87,12 @@ export default function CitizenApplicationDetail() {
 
   const handleProcessPayment = async () => {
     setActionLoading(true);
-    setNotice('');
     try {
       const updated = await paymentService.triggerMockPayment(application.id, 'SUCCESSFUL');
       setApplication(updated);
-      setNotice('Simulated INR stamp duty & mutation fees paid successfully.');
+      toast.success('Simulated INR stamp duty & mutation fees paid successfully.');
     } catch (err) {
-      setNotice(err.message || 'Simulated payment failed.');
+      toast.error(err.message || 'Simulated payment failed.');
     } finally {
       setActionLoading(false);
     }
@@ -71,8 +102,14 @@ export default function CitizenApplicationDetail() {
     if (application?.txHash) {
       navigator.clipboard.writeText(application.txHash);
       setCopiedHash(true);
+      toast.success('Copied');
       setTimeout(() => setCopiedHash(false), 2000);
     }
+  };
+
+  const copyText = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copied');
   };
 
   const truncateHash = (hash) => {
@@ -83,29 +120,45 @@ export default function CitizenApplicationDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8F2F0] text-[#2B1B14] flex">
-        <Sidebar portal="citizen" />
-        <main className="flex-1 md:ml-[280px] p-8 flex items-center justify-center">
-          <span className="text-xs text-[#6E5D53]">Loading application details...</span>
-        </main>
-      </div>
+      <AppShell portal="citizen">
+        <div className="mb-8 space-y-3 border-b pb-6">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-8 w-72" />
+          <Skeleton className="h-4 w-56" />
+        </div>
+        <Skeleton className="mb-8 h-28 w-full rounded-xl" />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+          <div className="space-y-6">
+            <Skeleton className="h-52 w-full rounded-xl" />
+            <Skeleton className="h-40 w-full rounded-xl" />
+          </div>
+          <div className="space-y-6">
+            <Skeleton className="h-40 w-full rounded-xl" />
+            <Skeleton className="h-40 w-full rounded-xl" />
+          </div>
+        </div>
+      </AppShell>
     );
   }
 
   if (!application) {
     return (
-      <div className="min-h-screen bg-[#F8F2F0] text-[#2B1B14] flex">
-        <Sidebar portal="citizen" />
-        <main className="flex-1 md:ml-[280px] p-8">
-          <p className="text-sm text-[#DC2626]">Application not found.</p>
-          <button
-            onClick={() => navigate('/citizen/applications')}
-            className="mt-4 py-2 px-4 bg-[#2B1B14] text-white rounded text-xs"
-          >
-            Back to Applications
-          </button>
-        </main>
-      </div>
+      <AppShell portal="citizen">
+        <PageHeader eyebrow="Citizen Portal" title="Application" />
+        <Card className="shadow-card">
+          <EmptyState
+            icon={SearchX}
+            title="Application not found"
+            description="We could not find a transfer application with that ID."
+            action={
+              <Button onClick={() => navigate('/citizen/applications')}>
+                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                Back to Applications
+              </Button>
+            }
+          />
+        </Card>
+      </AppShell>
     );
   }
 
@@ -113,283 +166,350 @@ export default function CitizenApplicationDetail() {
   const isPaymentSuccess = application.paymentStatus === 'SUCCESSFUL';
 
   return (
-    <div className="min-h-screen bg-[#F8F2F0] text-[#2B1B14] flex">
-      <Sidebar portal="citizen" />
+    <AppShell portal="citizen">
+      <PageHeader
+        eyebrow="Citizen Portal"
+        title={`Transfer Application #${application.id}`}
+        description={`Submitted on ${application.submittedAt} · Property ${application.propertyId}`}
+        actions={
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Copy application ID" onClick={() => copyText(application.id)}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Copy application ID</TooltipContent>
+            </Tooltip>
+            <Button variant="outline" asChild>
+              <Link to="/citizen/applications">
+                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                Back to Applications
+              </Link>
+            </Button>
+          </>
+        }
+      >
+        <div className="mt-2">
+          <TransactionStatusPill status={application.applicationStatus} />
+        </div>
+      </PageHeader>
 
-      <main className="flex-1 md:ml-[280px] p-4 sm:p-6 md:p-8 lg:p-10 pt-16 md:pt-8 max-w-full overflow-x-hidden">
-        {/* Top Header */}
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 sm:pb-8 border-b border-[#D3CCC8] mb-6 sm:mb-8">
-          <div>
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#2B1B14]">
-                Transfer Application #{application.id}
-              </h1>
-              <TransactionStatusPill status={application.applicationStatus} />
-            </div>
-            <p className="text-[#6E5D53] text-xs sm:text-sm mt-1">
-              Submitted on {application.submittedAt} · Property {application.propertyId}
-            </p>
-          </div>
-          <Link
-            to="/citizen/applications"
-            className="py-2 px-4 bg-transparent border border-[#D3CCC8] hover:border-[#2B1B14] text-[#2B1B14] text-xs font-semibold rounded-lg transition-colors"
-          >
-            &larr; Back to Applications
-          </Link>
-        </header>
+      {/* Failure banners */}
+      {(application.blockchainStatus === 'SYNC_FAILED' || application.blockchainError) && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Blockchain State Synchronization Failed</AlertTitle>
+          <AlertDescription>
+            {application.blockchainError ||
+              'Database state synchronization timed out after blockchain ledger confirmation. The transfer has NOT been completed.'}
+          </AlertDescription>
+        </Alert>
+      )}
 
-        {notice && (
-          <div className="mb-6 p-3.5 rounded-xl bg-[#10B981]/15 border border-[#10B981]/30 text-[#047857] text-xs font-semibold animate-fade-in flex justify-between items-center">
-            <span>{notice}</span>
-            <button onClick={() => setNotice('')} className="text-sm font-bold leading-none">
-              &times;
-            </button>
-          </div>
-        )}
+      {application.paymentFailureMessage && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Payment Verification Notice</AlertTitle>
+          <AlertDescription>{application.paymentFailureMessage}</AlertDescription>
+        </Alert>
+      )}
 
-        {/* Failure banner if FAILED or SYNC_FAILED */}
-        {(application.blockchainStatus === 'SYNC_FAILED' || application.blockchainError) && (
-          <div className="mb-6 p-4 rounded-xl bg-[#DC2626]/10 border border-[#DC2626]/30 text-[#DC2626] text-xs font-medium">
-            <strong className="block font-bold mb-1">
-              Blockchain State Synchronization Failed
-            </strong>
-            <p>
-              {application.blockchainError ||
-                'Database state synchronization timed out after blockchain ledger confirmation. The transfer has NOT been completed.'}
-            </p>
-          </div>
-        )}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
+        {/* Main column */}
+        <div className="flex min-w-0 flex-col gap-6">
+          <section>
+            <h2 className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              Mutation Workflow Progress
+            </h2>
+            <MutationStepper
+              applicationStatus={application.applicationStatus}
+              blockchainStatus={application.blockchainStatus}
+            />
+          </section>
 
-        {application.paymentFailureMessage && (
-          <div className="mb-6 p-4 rounded-xl bg-[#DC2626]/10 border border-[#DC2626]/30 text-[#DC2626] text-xs font-medium">
-            <strong className="block font-bold mb-1">Payment Verification Notice:</strong>
-            <p>{application.paymentFailureMessage}</p>
-          </div>
-        )}
-
-        {/* Mutation Stepper */}
-        <section className="mb-8">
-          <h2 className="text-sm font-bold text-[#6E5D53] uppercase tracking-wider mb-3">
-            Mutation Workflow Progress
-          </h2>
-          <MutationStepper
-            applicationStatus={application.applicationStatus}
-            blockchainStatus={application.blockchainStatus}
-          />
-        </section>
-
-        {/* Main Details Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Left Column: Property & Parties */}
-          <div className="flex flex-col gap-6">
-            {/* Property Card */}
-            <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm">
-              <h3 className="text-base font-bold text-[#2B1B14] mb-4">Parcel Details</h3>
-              <div className="text-xs flex flex-col gap-2.5">
-                <div className="flex justify-between py-1 border-b border-[#D3CCC8]">
-                  <span className="text-[#6E5D53]">Property ID (ULPIN):</span>
-                  <span className="font-mono font-bold text-[#2B1B14]">
-                    {application.propertyId}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-[#D3CCC8]">
-                  <span className="text-[#6E5D53]">Khasra Number:</span>
-                  <span className="font-bold text-[#2B1B14]">{property?.khasraNumber}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-[#D3CCC8]">
-                  <span className="text-[#6E5D53]">Location:</span>
-                  <span className="text-[#2B1B14]">
-                    Village {property?.village}, Tehsil {property?.tehsil}, {property?.district}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-[#D3CCC8]">
-                  <span className="text-[#6E5D53]">Surface Area:</span>
-                  <span className="text-[#2B1B14]">{property?.areaSqFt} sq. ft</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-[#6E5D53]">Land Classification:</span>
-                  <span className="text-[#2B1B14]">{property?.landType}</span>
-                </div>
+          {/* Parcel */}
+          <Card className="shadow-card">
+            <CardHeader className="flex-row items-center gap-3 space-y-0 p-5 pb-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Landmark className="h-4 w-4" aria-hidden="true" />
               </div>
-            </div>
+              <CardTitle className="text-base">Parcel Details</CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 pt-0">
+              <dl>
+                <Row label="Property ID (ULPIN):">
+                  <span className="font-mono font-bold">{application.propertyId}</span>
+                </Row>
+                <Row label="Khasra Number:"><span className="font-bold">{property?.khasraNumber}</span></Row>
+                <Row label="Location:">
+                  Village {property?.village}, Tehsil {property?.tehsil}, {property?.district}
+                </Row>
+                <Row label="Surface Area:"><span className="font-mono">{property?.areaSqFt}</span> sq. ft</Row>
+                <Row label="Land Classification:" last>{property?.landType}</Row>
+              </dl>
+            </CardContent>
+          </Card>
 
-            {/* Parties Card */}
-            <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm">
-              <h3 className="text-base font-bold text-[#2B1B14] mb-4">Parties Involved</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div className="p-3.5 bg-[#F8F2F0] rounded-xl border border-[#D3CCC8]">
-                  <span className="text-[0.68rem] uppercase font-bold text-[#6E5D53] block mb-1">
-                    Transferor (Seller)
-                  </span>
-                  <strong className="text-sm text-[#2B1B14] block">
-                    {application.sellerName}
-                  </strong>
-                  <span className="text-[#7A6B63] block mt-1">+91 {application.sellerPhone}</span>
-                </div>
-                <div className="p-3.5 bg-[#F8F2F0] rounded-xl border border-[#D3CCC8]">
-                  <span className="text-[0.68rem] uppercase font-bold text-[#6E5D53] block mb-1">
-                    Transferee (Buyer)
-                  </span>
-                  <strong className="text-sm text-[#2B1B14] block">{application.buyerName}</strong>
-                  <span className="text-[#7A6B63] block mt-1">+91 {application.buyerPhone}</span>
-                </div>
+          {/* Parties */}
+          <Card className="shadow-card">
+            <CardHeader className="flex-row items-center gap-3 space-y-0 p-5 pb-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Users className="h-4 w-4" aria-hidden="true" />
               </div>
-            </div>
+              <CardTitle className="text-base">Parties Involved</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-4 p-5 pt-0 text-xs sm:grid-cols-2">
+              <div className="rounded-xl border bg-muted/30 p-3.5">
+                <span className="mb-1 block text-[0.68rem] font-bold uppercase text-muted-foreground">Transferor (Seller)</span>
+                <strong className="block text-sm text-foreground">{application.sellerName}</strong>
+                <span className="mt-1 block font-mono text-muted-foreground">+91 {application.sellerPhone}</span>
+              </div>
+              <div className="rounded-xl border bg-muted/30 p-3.5">
+                <span className="mb-1 block text-[0.68rem] font-bold uppercase text-muted-foreground">Transferee (Buyer)</span>
+                <strong className="block text-sm text-foreground">{application.buyerName}</strong>
+                <span className="mt-1 block font-mono text-muted-foreground">+91 {application.buyerPhone}</span>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Documents Card */}
-            <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm">
-              <h3 className="text-base font-bold text-[#2B1B14] mb-4">
+          {/* Documents */}
+          <Card className="shadow-card">
+            <CardHeader className="flex-row items-center gap-3 space-y-0 p-5 pb-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <FileText className="h-4 w-4" aria-hidden="true" />
+              </div>
+              <CardTitle className="text-base">
                 Submitted Deeds &amp; Certs ({application.documents?.length || 0})
-              </h3>
-              <div className="flex flex-col gap-2.5">
-                {(application.documents || []).map((doc, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 bg-[#F8F2F0] rounded-lg border border-[#D3CCC8] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs"
-                  >
-                    <div>
-                      <strong className="text-[#2B1B14] block">
-                        {DOCUMENT_TYPE_LABELS[doc.type] || doc.type}
-                      </strong>
-                      <span className="text-[#6E5D53] text-[0.72rem]">{doc.fileName}</span>
-                    </div>
-                    <div className="font-mono text-[0.68rem] text-[#7A6B63] bg-[#E6DEDA] px-2 py-0.5 rounded border border-[#D3CCC8]">
-                      Hash: {truncateHash(doc.hash)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 pt-0">
+              {(application.documents || []).length === 0 ? (
+                <p className="text-xs text-muted-foreground">No documents attached.</p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {(application.documents || []).map((doc, idx) => (
+                    <li
+                      key={idx}
+                      className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-3 text-xs transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border bg-card text-muted-foreground">
+                          <FileText className="h-4 w-4" aria-hidden="true" />
+                        </div>
+                        <div className="min-w-0">
+                          <strong className="block truncate text-foreground">{DOCUMENT_TYPE_LABELS[doc.type] || doc.type}</strong>
+                          <span className="block truncate text-[0.72rem] text-muted-foreground">{doc.fileName}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <code className="rounded border bg-card px-2 py-0.5 font-mono text-[0.68rem] text-muted-foreground">
+                          {truncateHash(doc.hash)}
+                        </code>
+                        {doc.hash && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Copy document hash" onClick={() => copyText(doc.hash)}>
+                                <Copy className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copy hash</TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-          {/* Right Column: Actions (KYC, Payment, Appointment, Blockchain) */}
-          <div className="flex flex-col gap-6">
-            {/* KYC Card */}
-            <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-base font-bold text-[#2B1B14]">Identity Verification (KYC)</h3>
+        {/* Side column */}
+        <aside className="flex min-w-0 flex-col gap-6">
+          {/* Status summary */}
+          <Card className="shadow-card">
+            <CardHeader className="p-5 pb-3">
+              <CardTitle className="text-base">Status Summary</CardTitle>
+              <CardDescription>Current state of each workflow stage.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-5 pt-0">
+              <dl className="flex flex-col gap-3 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="text-muted-foreground">Application</dt>
+                  <dd><TransactionStatusPill status={application.applicationStatus} /></dd>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="text-muted-foreground">KYC</dt>
+                  <dd><TransactionStatusPill status={application.kycStatus} type="kyc" /></dd>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="text-muted-foreground">Payment</dt>
+                  <dd><TransactionStatusPill status={application.paymentStatus} type="payment" /></dd>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="text-muted-foreground">Blockchain</dt>
+                  <dd><TransactionStatusPill status={application.blockchainStatus} type="blockchain" /></dd>
+                </div>
+              </dl>
+            </CardContent>
+          </Card>
+
+          {/* KYC */}
+          <Card className="shadow-card">
+            <CardHeader className="p-5 pb-3">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ShieldCheck className="h-4 w-4 text-primary" aria-hidden="true" />
+                  Identity Verification (KYC)
+                </CardTitle>
                 <TransactionStatusPill status={application.kycStatus} type="kyc" />
               </div>
-              <p className="text-xs text-[#6E5D53] mb-4">
+              <CardDescription className="text-xs">
                 Aadhaar eKYC authentication simulation for seller &amp; buyer identity verification.
-              </p>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-5 pt-0">
               {isKycVerified ? (
-                <div className="p-3 bg-[#10B981]/10 border border-[#10B981]/25 rounded-lg text-[#047857] text-xs font-semibold flex items-center gap-2">
-                  <span>✓</span>
+                <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/15 p-3 text-xs font-semibold text-success-foreground">
+                  <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
                   <span>KYC verified and recorded for this application.</span>
                 </div>
               ) : (
-                <button
-                  disabled={actionLoading}
-                  onClick={handleStartKyc}
-                  className="w-full py-2.5 px-4 bg-[#2B1B14] text-[#F8F2F0] font-bold text-xs rounded-lg shadow hover:bg-[#3D281F] transition-all disabled:opacity-60"
-                >
-                  {actionLoading
-                    ? 'Simulating Verification...'
-                    : 'Start KYC (simulated)'}
-                </button>
+                <Button className="w-full" disabled={actionLoading} onClick={handleStartKyc}>
+                  {actionLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                      Simulating Verification...
+                    </>
+                  ) : (
+                    'Start KYC (simulated)'
+                  )}
+                </Button>
               )}
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* Payment Card */}
-            <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-base font-bold text-[#2B1B14]">Stamp Duty &amp; Mutation Fees</h3>
+          {/* Payment */}
+          <Card className="shadow-card">
+            <CardHeader className="p-5 pb-3">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <CreditCard className="h-4 w-4 text-primary" aria-hidden="true" />
+                  Stamp Duty &amp; Mutation Fees
+                </CardTitle>
                 <TransactionStatusPill status={application.paymentStatus} type="payment" />
               </div>
-              <p className="text-xs text-[#6E5D53] mb-4">
+              <CardDescription className="text-xs">
                 Mock Indian Rupee (INR) payment for stamp duty charges. Requires verified KYC.
-              </p>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-5 pt-0">
               {isPaymentSuccess ? (
-                <div className="p-3 bg-[#10B981]/10 border border-[#10B981]/25 rounded-lg text-[#047857] text-xs font-semibold flex items-center gap-2">
-                  <span>✓</span>
+                <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/15 p-3 text-xs font-semibold text-success-foreground">
+                  <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
                   <span>Payment received and cleared.</span>
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">
-                  <button
-                    disabled={!isKycVerified || actionLoading}
-                    onClick={handleProcessPayment}
-                    className="w-full py-2.5 px-4 bg-[#2B1B14] text-[#F8F2F0] font-bold text-xs rounded-lg shadow hover:bg-[#3D281F] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {actionLoading
-                      ? 'Processing simulated payment...'
-                      : 'Pay (simulated, INR)'}
-                  </button>
+                  <Button className="w-full" disabled={!isKycVerified || actionLoading} onClick={handleProcessPayment}>
+                    {actionLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                        Processing simulated payment...
+                      </>
+                    ) : (
+                      'Pay (simulated, INR)'
+                    )}
+                  </Button>
                   {!isKycVerified && (
-                    <span className="text-[0.7rem] text-[#B45309]">
+                    <span className="text-[0.7rem] text-warning-foreground">
                       * KYC must be verified before payment can be initiated.
                     </span>
                   )}
                 </div>
               )}
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* Appointment Card */}
-            <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm">
-              <h3 className="text-base font-bold text-[#2B1B14] mb-3">Sub-Registrar Appointment</h3>
+          {/* Appointment */}
+          <Card className="shadow-card">
+            <CardHeader className="p-5 pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CalendarClock className="h-4 w-4 text-primary" aria-hidden="true" />
+                Sub-Registrar Appointment
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 pt-0">
               {application.appointment ? (
-                <div className="p-3.5 bg-[#F8F2F0] rounded-xl border border-[#D3CCC8] text-xs flex flex-col gap-1.5">
-                  <div className="flex justify-between">
-                    <span className="text-[#6E5D53]">Office:</span>
-                    <strong className="text-[#2B1B14]">{application.appointment.office}</strong>
+                <dl className="flex flex-col gap-1.5 rounded-xl border bg-muted/30 p-3.5 text-xs">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted-foreground">Office:</dt>
+                    <dd className="text-right font-bold text-foreground">{application.appointment.office}</dd>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#6E5D53]">Date:</span>
-                    <strong className="text-[#2B1B14]">{application.appointment.date}</strong>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted-foreground">Date:</dt>
+                    <dd className="font-bold text-foreground">{application.appointment.date}</dd>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#6E5D53]">Time Slot:</span>
-                    <strong className="text-[#2B1B14]">{application.appointment.slot}</strong>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted-foreground">Time Slot:</dt>
+                    <dd className="font-bold text-foreground">{application.appointment.slot}</dd>
                   </div>
-                </div>
+                </dl>
               ) : (
-                <div className="flex flex-col gap-2">
-                  <p className="text-xs text-[#6E5D53]">
+                <div className="flex flex-col gap-3">
+                  <p className="text-xs text-muted-foreground">
                     No appointment scheduled yet for physical verification signoff.
                   </p>
-                  <button
-                    onClick={() =>
-                      navigate(`/citizen/book-appointment?applicationId=${application.id}`)
-                    }
-                    className="py-2.5 px-4 bg-transparent border border-[#D3CCC8] hover:border-[#2B1B14] text-[#2B1B14] text-xs font-semibold rounded-lg transition-colors"
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate(`/citizen/book-appointment?applicationId=${application.id}`)}
                   >
-                    Schedule Appointment Slot &rarr;
-                  </button>
+                    Schedule Appointment Slot
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </Button>
                 </div>
               )}
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* Blockchain Transaction Tracker */}
-            {application.txHash && (
-              <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-base font-bold text-[#2B1B14]">Blockchain State Tracker</h3>
-                  <TransactionStatusPill
-                    status={application.blockchainStatus}
-                    type="blockchain"
-                  />
+          {/* Blockchain */}
+          {application.txHash && (
+            <Card className="shadow-card">
+              <CardHeader className="p-5 pb-3">
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Link2 className="h-4 w-4 text-primary" aria-hidden="true" />
+                    Blockchain State Tracker
+                  </CardTitle>
+                  <TransactionStatusPill status={application.blockchainStatus} type="blockchain" />
                 </div>
-                <p className="text-xs text-[#6E5D53] mb-3">
+                <CardDescription className="text-xs">
                   Asynchronous ledger confirmation details recorded by the backend registrar node.
-                </p>
-                <div className="p-3 rounded-lg bg-[#F8F2F0] border border-[#D3CCC8] flex flex-col gap-2">
-                  <span className="text-[0.72rem] text-[#6E5D53]">Transaction Hash:</span>
-                  <div className="font-mono text-xs break-all text-[#2B1B14]">
-                    {application.txHash}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-5 pt-0">
+                <div className="rounded-lg border bg-muted/30 p-3">
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="text-[0.72rem] text-muted-foreground">Transaction Hash:</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Copy transaction hash" onClick={handleCopyHash}>
+                          {copiedHash ? <Check className="h-3.5 w-3.5 text-success-foreground" /> : <Copy className="h-3.5 w-3.5" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{copiedHash ? 'Copied' : 'Copy hash'}</TooltipContent>
+                    </Tooltip>
                   </div>
-                  <button
-                    onClick={handleCopyHash}
-                    className="self-start py-1 px-3 bg-[#E6DEDA] border border-[#D3CCC8] hover:border-[#2B1B14] text-[#2B1B14] text-[0.72rem] font-semibold rounded transition-colors"
-                  >
-                    {copiedHash ? '✓ Copied' : 'Copy Hash'}
-                  </button>
+                  <Separator className="mb-2" />
+                  <code className="block break-all font-mono text-xs text-foreground">{application.txHash}</code>
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </main>
-    </div>
+              </CardContent>
+            </Card>
+          )}
+        </aside>
+      </div>
+    </AppShell>
   );
 }

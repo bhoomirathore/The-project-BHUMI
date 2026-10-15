@@ -1,11 +1,84 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../../components/Sidebar';
+import { motion } from 'framer-motion';
+import {
+  Landmark,
+  BadgeCheck,
+  ArrowLeftRight,
+  CalendarClock,
+  ArrowRight,
+  FilePlus2,
+  ShieldCheck,
+  CalendarDays,
+  FileDown,
+  Inbox,
+  Download,
+  Eye,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '../../hooks/useAuth';
 import propertyService from '../../services/propertyService';
 import applicationService from '../../services/applicationService';
 import documentService from '../../services/documentService';
-import Toast from '../../components/Toast';
+import AppShell from '@/components/layout/AppShell';
+import PageHeader from '@/components/common/PageHeader';
+import Section from '@/components/common/Section';
+import StatCard from '@/components/common/StatCard';
+import EmptyState from '@/components/common/EmptyState';
+import { staggerContainer, staggerItem } from '@/components/common/Reveal';
+import TransactionStatusPill from '@/components/TransactionStatusPill';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { cn } from '@/lib/utils';
+
+const QUICK_ACTIONS = [
+  {
+    title: 'New Transfer',
+    description: 'Start a new land transfer mutation request',
+    cta: 'Initiate Now',
+    to: '/citizen/new-transfer',
+    icon: FilePlus2,
+  },
+  {
+    title: 'Verify Land',
+    description: 'Verify title and synchronized records using Khasra',
+    cta: 'Verify Now',
+    to: '/citizen/verify-land',
+    icon: ShieldCheck,
+  },
+  {
+    title: 'Book Appointment',
+    description: 'Schedule physical Sub-Registrar Office slot',
+    cta: 'Book Slot',
+    to: '/citizen/book-appointment',
+    icon: CalendarDays,
+  },
+  {
+    title: 'Download E-Registry',
+    description: 'View and download finalized digital certificates',
+    cta: 'Download',
+    to: '/citizen/download-registry',
+    icon: FileDown,
+  },
+];
+
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
 
 export default function CitizenDashboard() {
   const { user } = useAuth();
@@ -14,7 +87,6 @@ export default function CitizenDashboard() {
   const [properties, setProperties] = useState([]);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -48,7 +120,8 @@ export default function CitizenDashboard() {
   const recentActivities = applications.slice(0, 4).map((app) => ({
     id: app.id,
     title: `Transfer Application ${app.id}`,
-    description: `Parcel ${app.propertyId} · Status: ${app.applicationStatus}`,
+    description: `Parcel ${app.propertyId}`,
+    status: app.applicationStatus,
     time: app.completedAt || app.approvedAt || app.submittedAt || 'Recently',
     appId: app.id,
   }));
@@ -56,250 +129,261 @@ export default function CitizenDashboard() {
   const handleDownload = async (appId) => {
     const res = await documentService.downloadERegistry(appId);
     if (res?.isMockNotice) {
-      setToastMessage(res.message);
+      toast.info(res.message);
     }
   };
 
+  const today = new Date().toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
   return (
-    <div className="min-h-screen bg-[#F8F2F0] text-[#2B1B14] flex">
-      <Sidebar portal="citizen" />
-
-      <main className="flex-1 md:ml-[280px] p-4 sm:p-6 md:p-8 lg:p-10 pt-16 md:pt-8 max-w-full overflow-x-hidden">
-        {toastMessage && (
-          <Toast message={toastMessage} type="info" onClose={() => setToastMessage('')} />
-        )}
-
-        {/* Top Header */}
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 sm:pb-8 border-b border-[#D3CCC8] mb-6 sm:mb-8">
-          <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#2B1B14]">
-              Welcome back, {user?.name || 'Rajesh Kumar Singh'}
-            </h1>
-            <p className="text-[#6E5D53] text-xs sm:text-sm mt-1">
-              Manage your land records and transfer applications
-            </p>
+    <AppShell portal="citizen">
+      <PageHeader
+        eyebrow="Citizen Portal"
+        title={`Welcome back, ${user?.name || 'Rajesh Kumar Singh'}`}
+        description="Manage your land records and transfer applications"
+        actions={
+          <div className="text-left sm:text-right">
+            <div className="text-sm font-semibold text-foreground">{greeting()}</div>
+            <div className="text-xs text-muted-foreground">{today}</div>
           </div>
+        }
+      />
 
-          <div className="flex items-center gap-3 p-2 px-3 rounded-lg bg-[#E6DEDA] border border-[#D3CCC8]">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2B1B14] to-[#6E5D53] text-[#F8F2F0] font-bold text-xs flex items-center justify-center">
-              {user?.avatar || 'RS'}
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-[#2B1B14]">{user?.name}</span>
-              <span className="text-[0.68rem] text-[#6E5D53]">Citizen</span>
-            </div>
-          </div>
-        </header>
+      {/* Quick stats */}
+      <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4" aria-label="Summary statistics">
+        <StatCard label="Total Properties" value={totalProperties} icon={Landmark} tone="default" loading={loading} delay={0} />
+        <StatCard label="Active Properties" value={activeProperties} icon={BadgeCheck} tone="success" loading={loading} delay={0.05} />
+        <StatCard label="Transfers In Progress" value={transfersInProgress} icon={ArrowLeftRight} tone="warning" loading={loading} delay={0.1} />
+        <StatCard label="Upcoming Appointments" value={upcomingAppointments} icon={CalendarClock} tone="info" loading={loading} delay={0.15} />
+      </section>
 
-        {/* Quick Stats Cards */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
-          <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm hover:-translate-y-1 transition-all">
-            <div className="text-3xl font-extrabold text-[#2B1B14]">{totalProperties}</div>
-            <div className="text-sm font-medium text-[#6E5D53] mt-1">Total Properties</div>
-          </div>
-
-          <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm hover:-translate-y-1 transition-all">
-            <div className="text-3xl font-extrabold text-[#047857]">{activeProperties}</div>
-            <div className="text-sm font-medium text-[#6E5D53] mt-1">Active Properties</div>
-          </div>
-
-          <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm hover:-translate-y-1 transition-all">
-            <div className="text-3xl font-extrabold text-[#B45309]">{transfersInProgress}</div>
-            <div className="text-sm font-medium text-[#6E5D53] mt-1">Transfers In Progress</div>
-          </div>
-
-          <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm hover:-translate-y-1 transition-all">
-            <div className="text-3xl font-extrabold text-[#2563EB]">{upcomingAppointments}</div>
-            <div className="text-sm font-medium text-[#6E5D53] mt-1">Upcoming Appointments</div>
-          </div>
-        </section>
-
-        {/* Quick Actions (4 Cards) */}
-        <section className="mb-10">
-          <h2 className="text-xl font-bold text-[#2B1B14] mb-5">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div
-              onClick={() => navigate('/citizen/new-transfer')}
-              className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm hover:-translate-y-1 hover:border-[#2B1B14] cursor-pointer transition-all flex flex-col justify-between"
-            >
-              <div>
-                <h3 className="text-base font-bold text-[#2B1B14] mb-2">New Transfer</h3>
-                <p className="text-xs text-[#6E5D53] leading-relaxed">
-                  Start a new land transfer mutation request
-                </p>
-              </div>
-              <button className="mt-6 w-full py-2 bg-[#2B1B14] text-[#F8F2F0] font-bold rounded-lg text-xs shadow hover:bg-[#3D281F] transition-all">
-                Initiate Now
-              </button>
-            </div>
-
-            <div
-              onClick={() => navigate('/citizen/verify-land')}
-              className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm hover:-translate-y-1 hover:border-[#2B1B14] cursor-pointer transition-all flex flex-col justify-between"
-            >
-              <div>
-                <h3 className="text-base font-bold text-[#2B1B14] mb-2">Verify Land</h3>
-                <p className="text-xs text-[#6E5D53] leading-relaxed">
-                  Verify title and synchronized records using Khasra
-                </p>
-              </div>
-              <button className="mt-6 w-full py-2 bg-[#2B1B14] text-[#F8F2F0] font-bold rounded-lg text-xs shadow hover:bg-[#3D281F] transition-all">
-                Verify Now
-              </button>
-            </div>
-
-            <div
-              onClick={() => navigate('/citizen/book-appointment')}
-              className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm hover:-translate-y-1 hover:border-[#2B1B14] cursor-pointer transition-all flex flex-col justify-between"
-            >
-              <div>
-                <h3 className="text-base font-bold text-[#2B1B14] mb-2">Book Appointment</h3>
-                <p className="text-xs text-[#6E5D53] leading-relaxed">
-                  Schedule physical Sub-Registrar Office slot
-                </p>
-              </div>
-              <button className="mt-6 w-full py-2 bg-[#2B1B14] text-[#F8F2F0] font-bold rounded-lg text-xs shadow hover:bg-[#3D281F] transition-all">
-                Book Slot
-              </button>
-            </div>
-
-            <div
-              onClick={() => navigate('/citizen/download-registry')}
-              className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-6 shadow-sm hover:-translate-y-1 hover:border-[#2B1B14] cursor-pointer transition-all flex flex-col justify-between"
-            >
-              <div>
-                <h3 className="text-base font-bold text-[#2B1B14] mb-2">Download E-Registry</h3>
-                <p className="text-xs text-[#6E5D53] leading-relaxed">
-                  View and download finalized digital certificates
-                </p>
-              </div>
-              <button className="mt-6 w-full py-2 bg-[#2B1B14] text-[#F8F2F0] font-bold rounded-lg text-xs shadow hover:bg-[#3D281F] transition-all">
-                Download
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* Recent Activity (Derived from user applications) */}
-        <section className="mb-10">
-          <h2 className="text-xl font-bold text-[#2B1B14] mb-5">Recent Activity</h2>
-          <div className="flex flex-col gap-4">
-            {recentActivities.length === 0 ? (
-              <div className="p-6 bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl text-xs text-[#6E5D53]">
-                No recent transfer activity recorded.
-              </div>
-            ) : (
-              recentActivities.map((act) => (
-                <div
-                  key={act.id}
-                  className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+      {/* Quick actions */}
+      <Section title="Quick Actions">
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:gap-5"
+        >
+          {QUICK_ACTIONS.map((action) => {
+            const Icon = action.icon;
+            return (
+              <motion.div key={action.to} variants={staggerItem} className="h-full">
+                <Card
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(action.to)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      navigate(action.to);
+                    }
+                  }}
+                  className="card-interactive group flex h-full cursor-pointer flex-col justify-between shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <div>
-                    <h4 className="font-bold text-[#2B1B14] text-sm">{act.title}</h4>
-                    <p className="text-xs text-[#6E5D53] mt-0.5">{act.description}</p>
-                    <span className="text-[0.68rem] text-[#7A6B63] block mt-1">{act.time}</span>
+                  <CardContent className="flex h-full flex-col p-5 sm:p-6">
+                    <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110">
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </div>
+                    <h3 className="text-base font-bold text-foreground">{action.title}</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{action.description}</p>
+                    <div className="mt-5 flex items-center justify-between text-xs font-bold text-primary">
+                      <span>{action.cta}</span>
+                      <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" aria-hidden="true" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      </Section>
+
+      {/* Recent activity */}
+      <Section title="Recent Activity" description="Derived from your latest transfer applications">
+        <Card className="shadow-card">
+          <CardContent className="p-5 sm:p-6">
+            {loading ? (
+              <div className="flex flex-col gap-5">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex gap-4">
+                    <Skeleton className="h-3 w-3 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-3 w-1/3" />
+                    </div>
                   </div>
-                  <button
-                    onClick={() => navigate(`/citizen/applications/${act.appId}`)}
-                    className="py-1.5 px-4 bg-transparent border border-[#D3CCC8] hover:border-[#2B1B14] text-[#2B1B14] text-xs font-semibold rounded-lg transition-colors"
+                ))}
+              </div>
+            ) : recentActivities.length === 0 ? (
+              <EmptyState
+                compact
+                icon={Inbox}
+                title="No recent activity"
+                description="No recent transfer activity recorded."
+                action={
+                  <Button size="sm" onClick={() => navigate('/citizen/new-transfer')}>
+                    Start a transfer
+                  </Button>
+                }
+              />
+            ) : (
+              <ol className="relative flex flex-col">
+                {recentActivities.map((act, idx) => (
+                  <motion.li
+                    key={act.id}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.08 * idx, duration: 0.35 }}
+                    className="relative flex gap-4 pb-6 last:pb-0"
                   >
-                    View Details
-                  </button>
-                </div>
-              ))
+                    {/* dot + line */}
+                    <div className="flex flex-col items-center">
+                      <span
+                        className={cn(
+                          'mt-1 h-3 w-3 shrink-0 rounded-full border-2 border-card ring-2',
+                          idx === 0 ? 'bg-primary ring-primary/30' : 'bg-muted-foreground/60 ring-border'
+                        )}
+                        aria-hidden="true"
+                      />
+                      {idx < recentActivities.length - 1 && (
+                        <span className="mt-1 w-px flex-1 bg-border" aria-hidden="true" />
+                      )}
+                    </div>
+                    <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="text-sm font-bold text-foreground">{act.title}</h4>
+                          <TransactionStatusPill status={act.status} />
+                        </div>
+                        <p className="mt-0.5 text-xs text-muted-foreground">{act.description}</p>
+                        <span className="mt-1 block text-[0.68rem] text-muted-foreground/80">{act.time}</span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 self-start sm:self-auto"
+                        onClick={() => navigate(`/citizen/applications/${act.appId}`)}
+                      >
+                        View Details
+                        <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                      </Button>
+                    </div>
+                  </motion.li>
+                ))}
+              </ol>
             )}
-          </div>
-        </section>
+          </CardContent>
+        </Card>
+      </Section>
 
-        {/* My Properties Table */}
-        <section className="mb-10">
-          <div className="flex justify-between items-center mb-5">
-            <h2 className="text-xl font-bold text-[#2B1B14]">My Properties</h2>
-            <button
-              onClick={() => navigate('/citizen/properties')}
-              className="text-xs font-bold text-[#2B1B14] hover:underline"
-            >
-              View All Properties &rarr;
-            </button>
-          </div>
-
-          <div className="bg-[#E6DEDA] border border-[#D3CCC8] rounded-xl overflow-x-auto shadow-sm">
-            <table className="w-full text-left text-xs sm:text-sm border-collapse min-w-[640px]">
-              <thead>
-                <tr className="border-b border-[#D3CCC8] bg-[#D3CCC8]/30 text-[#6E5D53]">
-                  <th className="p-4 font-semibold">Khasra No.</th>
-                  <th className="p-4 font-semibold">Property ID</th>
-                  <th className="p-4 font-semibold">Location</th>
-                  <th className="p-4 font-semibold">Area (sq. ft)</th>
-                  <th className="p-4 font-semibold">Status</th>
-                  <th className="p-4 font-semibold">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#D3CCC8] text-[#2B1B14]">
+      {/* My properties */}
+      <Section
+        title="My Properties"
+        actions={
+          <Button variant="link" size="sm" className="px-0 text-xs font-bold" onClick={() => navigate('/citizen/properties')}>
+            View All Properties
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </Button>
+        }
+      >
+        <Card className="overflow-hidden shadow-card">
+          <div className="overflow-x-auto">
+            <Table className="min-w-[640px] text-xs sm:text-sm">
+              <TableHeader>
+                <TableRow className="bg-muted/40 hover:bg-muted/40">
+                  <TableHead className="px-4">Khasra No.</TableHead>
+                  <TableHead className="px-4">Property ID</TableHead>
+                  <TableHead className="px-4">Location</TableHead>
+                  <TableHead className="px-4">Area (sq. ft)</TableHead>
+                  <TableHead className="px-4">Status</TableHead>
+                  <TableHead className="px-4">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {loading ? (
-                  <tr>
-                    <td colSpan={6} className="p-6 text-center text-xs text-[#6E5D53]">
-                      Loading parcels...
-                    </td>
-                  </tr>
+                  [0, 1, 2].map((i) => (
+                    <TableRow key={i}>
+                      {[0, 1, 2, 3, 4, 5].map((c) => (
+                        <TableCell key={c} className="px-4 py-3">
+                          <Skeleton className="h-4 w-full" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : properties.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="p-0">
+                      <EmptyState
+                        compact
+                        icon={Landmark}
+                        title="No properties yet"
+                        description="No properties found registered under your account."
+                      />
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   properties.map((prop) => {
                     const completedApp = applications.find(
                       (a) => a.propertyId === prop.propertyId && a.hasERegistry
                     );
+                    const isActive = prop.status === 'Active';
 
                     return (
-                      <tr key={prop.propertyId} className="hover:bg-[#D3CCC8]/20 transition-colors">
-                        <td className="p-4 font-bold text-[#2B1B14]">{prop.khasraNumber}</td>
-                        <td className="p-4 font-mono text-[#6E5D53]">{prop.propertyId}</td>
-                        <td className="p-4 text-[#6E5D53]">
+                      <TableRow
+                        key={prop.propertyId}
+                        className="cursor-pointer hover:bg-muted/40"
+                        onClick={() => navigate('/citizen/properties')}
+                      >
+                        <TableCell className="px-4 py-3 font-bold text-foreground">{prop.khasraNumber}</TableCell>
+                        <TableCell className="px-4 py-3 font-mono text-muted-foreground">{prop.propertyId}</TableCell>
+                        <TableCell className="px-4 py-3 text-muted-foreground">
                           Village {prop.village}, Tehsil {prop.tehsil}
-                        </td>
-                        <td className="p-4 font-mono">{prop.areaSqFt.toLocaleString()}</td>
-                        <td className="p-4">
-                          <span
-                            className={`px-2.5 py-0.5 text-xs font-bold rounded-full ${
-                              prop.status === 'Active'
-                                ? 'bg-[#10B981]/15 text-[#047857] border border-[#10B981]/30'
-                                : 'bg-[#F59E0B]/15 text-[#B45309] border border-[#F59E0B]/30'
-                            }`}
-                          >
-                            {prop.status}
-                          </span>
-                        </td>
-                        <td className="p-4 flex gap-2">
-                          <button
-                            onClick={() => navigate('/citizen/properties')}
-                            className="px-3 py-1 bg-transparent border border-[#D3CCC8] rounded text-xs hover:border-[#2B1B14] transition-colors"
-                          >
-                            View
-                          </button>
-                          {completedApp ? (
-                            <button
-                              onClick={() => handleDownload(completedApp.id)}
-                              className="px-3 py-1 bg-[#2B1B14] text-[#F8F2F0] rounded text-xs hover:bg-[#3D281F] transition-colors"
-                            >
-                              Download
-                            </button>
-                          ) : (
-                            <button
-                              disabled
-                              title="No finalized E-Registry available for this property"
-                              className="px-3 py-1 bg-[#D3CCC8]/30 border border-[#D3CCC8]/30 text-[#7A6B63]/60 rounded text-xs cursor-not-allowed"
-                            >
-                              Download
-                            </button>
-                          )}
-                        </td>
-                      </tr>
+                        </TableCell>
+                        <TableCell className="px-4 py-3 font-mono">{prop.areaSqFt.toLocaleString()}</TableCell>
+                        <TableCell className="px-4 py-3">
+                          <Badge variant={isActive ? 'success' : 'warning'}>{prop.status}</Badge>
+                        </TableCell>
+                        <TableCell className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={() => navigate('/citizen/properties')}>
+                              <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                              View
+                            </Button>
+                            {completedApp ? (
+                              <Button size="sm" onClick={() => handleDownload(completedApp.id)}>
+                                <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                                Download
+                              </Button>
+                            ) : (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span tabIndex={0} className="inline-flex">
+                                    <Button size="sm" disabled aria-label="Download not available">
+                                      <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                                      Download
+                                    </Button>
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>No finalized E-Registry available for this property</TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
                     );
                   })
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
-        </section>
-      </main>
-    </div>
+        </Card>
+      </Section>
+    </AppShell>
   );
 }

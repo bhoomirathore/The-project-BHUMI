@@ -1,275 +1,312 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronsLeft, ChevronsRight, LogOut, Menu, Search, Settings, UserRound } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '../hooks/useAuth';
+import { PORTAL_META, PORTAL_NAV } from '@/config/navigation';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import BrandLogo from '@/components/common/BrandLogo';
+import RoleBadge from '@/components/RoleBadge';
+import ThemeToggle from '@/components/common/ThemeToggle';
 
-export default function Sidebar({ portal = 'citizen' }) {
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+export const SIDEBAR_WIDTH = 280;
+export const SIDEBAR_COLLAPSED_WIDTH = 80;
+const STORAGE_KEY = 'bhumi-sidebar-collapsed';
+
+function readCollapsed() {
+  try { return localStorage.getItem(STORAGE_KEY) === '1'; } catch { return false; }
+}
+
+function initials(name = '') {
+  return name.split(' ').filter(Boolean).map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+}
+
+function NavItem({ link, collapsed, onNavigate }) {
+  const Icon = link.icon;
+  const item = (
+    <NavLink
+      to={link.to}
+      onClick={onNavigate}
+      className={({ isActive }) =>
+        cn(
+          'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[0.9rem] font-medium outline-none transition-all duration-200',
+          'focus-visible:ring-2 focus-visible:ring-ring',
+          isActive
+            ? 'bg-primary text-primary-foreground shadow-sm'
+            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-foreground',
+          collapsed && 'justify-center px-0'
+        )
+      }
+    >
+      {({ isActive }) => (
+        <>
+          {isActive && (
+            <motion.span
+              layoutId="sidebar-active-pill"
+              className="absolute inset-0 rounded-lg bg-primary"
+              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+            />
+          )}
+          <Icon className={cn('relative z-10 h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110')} aria-hidden="true" />
+          {!collapsed && <span className="relative z-10 truncate">{link.label}</span>}
+        </>
+      )}
+    </NavLink>
+  );
+
+  if (!collapsed) return item;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{item}</TooltipTrigger>
+      <TooltipContent side="right" sideOffset={10}>{link.label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function SidebarBody({ portal, collapsed, onToggleCollapse, onNavigate, onLogoutRequest, onOpenSearch }) {
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const meta = PORTAL_META[portal] || PORTAL_META.citizen;
+  const sections = PORTAL_NAV[portal] || PORTAL_NAV.citizen;
 
-  const handleLogout = (e) => {
-    e.preventDefault();
-    if (window.confirm('Are you sure you want to logout?')) {
-      logout();
-      navigate('/auth/login');
-    }
-  };
-
-  const portalDefaults = {
-    citizen: {
-      sub: 'Citizen Portal',
-      name: 'Rajesh Kumar Singh',
-      role: 'Citizen',
-      badge: null,
-      avatar: 'RS',
-    },
-    authority: {
-      sub: 'Registrar Portal',
-      name: 'Ramesh Sharma',
-      role: 'Registrar, Sadar',
-      badge: 'REGISTRAR',
-      avatar: 'RS',
-    },
-    government: {
-      sub: 'HQ Portal',
-      name: 'Mukesh Kumar',
-      role: 'Joint Secretary',
-      badge: 'GOV HQ',
-      avatar: 'MK',
-    },
-  };
-
-  const currentPortal = portalDefaults[portal] || portalDefaults.citizen;
-
-  const displayName = user?.name || currentPortal.name;
-  const displayAvatar =
-    user?.avatar ||
-    (user?.name
-      ? user.name
-          .split(' ')
-          .map((n) => n[0])
-          .join('')
-          .slice(0, 2)
-          .toUpperCase()
-      : currentPortal.avatar);
-  const displayRole = user?.role === 'CITIZEN' ? 'Citizen' : currentPortal.role;
-  const displayBadge = user?.badge || currentPortal.badge;
-
-  const portalConfig = {
-    citizen: {
-      sections: [
-        {
-          label: 'Overview',
-          links: [
-            { to: '/citizen/dashboard', label: 'Dashboard' },
-          ],
-        },
-        {
-          label: 'Property & Transfers',
-          links: [
-            { to: '/citizen/properties', label: 'My Properties' },
-            { to: '/citizen/new-transfer', label: 'New Transfer' },
-            { to: '/citizen/applications', label: 'My Applications' },
-          ],
-        },
-        {
-          label: 'Land Services',
-          links: [
-            { to: '/citizen/verify-land', label: 'Verify Land' },
-            { to: '/citizen/book-appointment', label: 'Book Appointment' },
-            { to: '/citizen/download-registry', label: 'Download E-Registry' },
-          ],
-        },
-        {
-          label: 'Account',
-          links: [
-            { to: '#', label: 'Profile', onClick: (e) => { e.preventDefault(); alert('Profile settings'); } },
-            { to: '/auth/login', label: 'Logout', onClick: handleLogout },
-          ],
-        },
-      ],
-    },
-    authority: {
-      sections: [
-        {
-          label: 'Overview',
-          links: [
-            { to: '/authority/dashboard', label: 'Dashboard' },
-          ],
-        },
-        {
-          label: 'Operations',
-          links: [
-            { to: '/authority/applications', label: 'Applications' },
-            { to: '/authority/ekyc', label: 'KYC Status' },
-            { to: '/authority/registry', label: 'Transactions' },
-          ],
-        },
-        {
-          label: 'Account',
-          links: [
-            { to: '#', label: 'Profile', onClick: (e) => { e.preventDefault(); alert('Profile settings'); } },
-            { to: '/auth/login', label: 'Logout', onClick: handleLogout },
-          ],
-        },
-      ],
-    },
-    government: {
-      sections: [
-        {
-          label: 'Overview',
-          links: [
-            { to: '/government/dashboard', label: 'Dashboard' },
-          ],
-        },
-        {
-          label: 'Surveillance',
-          links: [
-            { to: '/government/monitoring', label: 'Registry Monitoring' },
-            { to: '/government/analytics', label: 'Analytics' },
-            { to: '/government/disputes', label: 'Disputes' },
-          ],
-        },
-        {
-          label: 'Account',
-          links: [
-            { to: '/auth/login', label: 'Logout', onClick: handleLogout },
-          ],
-        },
-      ],
-    },
-  };
-
-  const current = portalConfig[portal] || portalConfig.citizen;
+  const displayName = user?.name || meta.name;
+  const displayAvatar = user?.avatar || (user?.name ? initials(user.name) : meta.avatar);
+  const displayRole = user?.role === 'CITIZEN' ? 'Citizen' : meta.role;
+  const displayBadge = user?.role || meta.badge;
 
   return (
-    <>
-      {/* Mobile Backdrop */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-[#2B1B14]/40 z-40 md:hidden backdrop-blur-sm"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
-      {/* Mobile top toggle */}
-      <div className="md:hidden fixed top-3 left-3 z-50">
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="w-10 h-10 rounded-xl bg-[#E6DEDA] border border-[#D3CCC8] text-[#2B1B14] shadow-md flex items-center justify-center text-lg active:scale-95 transition-all"
-          aria-label="Toggle Sidebar Menu"
-        >
-          &#9776;
-        </button>
+    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
+      {/* Header */}
+      <div className={cn('flex items-center border-b border-sidebar-border bg-background/50 p-4', collapsed ? 'justify-center' : 'justify-between')}>
+        <BrandLogo size="sm" subtitle={collapsed ? undefined : meta.sub} showText={!collapsed} to="/" />
+        {!collapsed && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={onToggleCollapse} className="hidden h-8 w-8 md:inline-flex" aria-label="Collapse sidebar">
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Collapse</TooltipContent>
+          </Tooltip>
+        )}
       </div>
 
-      <aside
-        className={`fixed top-0 left-0 h-screen z-50 flex flex-col bg-[#E6DEDA] border-r border-[#D3CCC8] shadow-[4px_0_30px_rgba(43,27,20,0.06)] transition-all duration-300 ${
-          collapsed ? 'w-[80px]' : 'w-[280px]'
-        } ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
-      >
-        {/* Header */}
-        <div className="p-5 border-b border-[#D3CCC8] bg-[#F8F2F0]/60 flex items-center justify-between">
-          <div
-            className="flex items-center gap-3 cursor-pointer"
-            onClick={() => navigate('/')}
+      {/* User card */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              'flex w-full items-center gap-3 border-b border-sidebar-border bg-muted/30 p-3 text-left outline-none transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+              collapsed && 'justify-center'
+            )}
+            aria-label="Account menu"
           >
-            <div className="w-[32px] h-[32px] rounded-[6px] bg-gradient-to-br from-[#2B1B14] to-[#6E5D53] flex items-center justify-center shrink-0 shadow-sm">
-              <div className="w-[12px] h-[12px] bg-[#E6DEDA] rounded-[2px]" />
-            </div>
+            <Avatar className="h-10 w-10 shadow-sm ring-2 ring-background">
+              <AvatarFallback className="bg-gradient-to-br from-primary to-muted-foreground font-bold text-primary-foreground">
+                {displayAvatar}
+              </AvatarFallback>
+            </Avatar>
             {!collapsed && (
-              <div className="flex flex-col">
-                <span className="text-[1.2rem] font-bold tracking-[1px] text-[#2B1B14]">
-                  B.H.U.M.I
-                </span>
-                <span className="text-[0.68rem] text-[#6E5D53] uppercase tracking-wider font-semibold">
-                  {currentPortal.sub}
-                </span>
+              <div className="flex min-w-0 flex-col">
+                <span className="truncate text-[0.92rem] font-bold">{displayName}</span>
+                <span className="truncate text-[0.76rem] text-muted-foreground">{displayRole}</span>
+                <RoleBadge role={displayBadge} className="mt-1" />
               </div>
             )}
-          </div>
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="hidden md:block text-[#6E5D53] hover:text-[#2B1B14] p-1 text-lg leading-none"
-            title="Toggle Sidebar"
-          >
-            &#9776;
           </button>
-          <button
-            onClick={() => setMobileOpen(false)}
-            className="md:hidden text-[#6E5D53] hover:text-[#2B1B14] p-1 text-2xl leading-none"
-            aria-label="Close Sidebar"
-          >
-            &times;
-          </button>
-        </div>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" side="right" sideOffset={8} className="w-56">
+          <DropdownMenuLabel className="font-normal">
+            <div className="text-sm font-bold">{displayName}</div>
+            <div className="text-xs text-muted-foreground">{user?.email || displayRole}</div>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => toast.info('Profile settings are not available in this prototype.')}>
+            <UserRound className="mr-2 h-4 w-4" /> Profile
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => toast.info('Settings are not available in this prototype.')}>
+            <Settings className="mr-2 h-4 w-4" /> Settings
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => navigate(meta.home)}>
+            <Search className="mr-2 h-4 w-4" /> Go to dashboard
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={onLogoutRequest}>
+            <LogOut className="mr-2 h-4 w-4" /> Logout
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-        {/* User Card */}
-        <div className="p-4 border-b border-[#D3CCC8] flex items-center gap-3 bg-[#D3CCC8]/30">
-          <div className="w-[42px] h-[42px] rounded-full bg-gradient-to-br from-[#2B1B14] to-[#6E5D53] text-[#F8F2F0] font-bold flex items-center justify-center shrink-0 shadow-sm">
-            {displayAvatar}
-          </div>
-          {!collapsed && (
-            <div className="flex flex-col min-w-0">
-              <span className="text-[0.92rem] font-bold text-[#2B1B14] truncate">
-                {displayName}
-              </span>
-              <span className="text-[0.78rem] text-[#6E5D53] truncate">
-                {displayRole}
-              </span>
-              {displayBadge && (
-                <span className="mt-1 inline-block text-[0.62rem] font-extrabold uppercase px-2 py-0.5 rounded-full bg-[#2B1B14]/10 border border-[#2B1B14]/20 text-[#2B1B14] w-fit">
-                  {displayBadge}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
+      {/* Search trigger */}
+      <div className={cn('px-3 pt-3', collapsed && 'px-2')}>
+        {collapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" className="w-full" onClick={onOpenSearch} aria-label="Search (Ctrl+K)">
+                <Search className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Search · Ctrl K</TooltipContent>
+          </Tooltip>
+        ) : (
+          <Button variant="outline" className="w-full justify-between text-muted-foreground" onClick={onOpenSearch}>
+            <span className="flex items-center gap-2"><Search className="h-4 w-4" /> Quick search…</span>
+            <kbd className="pointer-events-none hidden rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:inline-block">⌘K</kbd>
+          </Button>
+        )}
+      </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 flex flex-col gap-4">
-          {current.sections.map((sec, idx) => (
-            <div key={idx} className="flex flex-col gap-1">
-              {!collapsed && (
-                <div className="px-3 text-[0.68rem] font-bold uppercase tracking-wider text-[#7A6B63] mb-1">
-                  {sec.label}
-                </div>
+      {/* Navigation */}
+      <ScrollArea className="flex-1">
+        <nav className={cn('flex flex-col gap-4 px-3 py-4', collapsed && 'px-2')} aria-label="Portal navigation">
+          {sections.map((sec) => (
+            <div key={sec.label} className="flex flex-col gap-1">
+              {collapsed ? (
+                <Separator className="my-1 bg-sidebar-border" />
+              ) : (
+                <div className="mb-1 px-3 text-[0.66rem] font-bold uppercase tracking-wider text-muted-foreground/80">{sec.label}</div>
               )}
-              {sec.links.map((link, lIdx) => (
-                <NavLink
-                  key={lIdx}
-                  to={link.to}
-                  onClick={(e) => {
-                    if (link.onClick) link.onClick(e);
-                    setMobileOpen(false);
-                  }}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-[0.9rem] font-medium transition-all duration-200 ${
-                      isActive && link.to !== '#'
-                        ? 'bg-[#D3CCC8] text-[#2B1B14] shadow-sm border-l-4 border-[#2B1B14]'
-                        : 'text-[#6E5D53] hover:text-[#2B1B14] hover:bg-[#D3CCC8]/40'
-                    }`
-                  }
-                  title={collapsed ? link.label : undefined}
-                >
-                  <span className="truncate">{link.label}</span>
-                </NavLink>
+              {sec.links.map((link) => (
+                <NavItem key={link.to} link={link} collapsed={collapsed} onNavigate={onNavigate} />
               ))}
             </div>
           ))}
         </nav>
+      </ScrollArea>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-[#D3CCC8]">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-[0.88rem] font-semibold text-[#DC2626] bg-[#DC2626]/10 hover:bg-[#DC2626]/15 border border-[#DC2626]/20 transition-all"
-          >
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
+      {/* Footer */}
+      <div className={cn('flex items-center gap-2 border-t border-sidebar-border p-3', collapsed ? 'flex-col' : 'justify-between')}>
+        <ThemeToggle />
+        {collapsed ? (
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={onToggleCollapse} className="hidden md:inline-flex" aria-label="Expand sidebar">
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Expand</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={onLogoutRequest} aria-label="Logout">
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Logout</TooltipContent>
+            </Tooltip>
+          </>
+        ) : (
+          <Button variant="outline" size="sm" className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={onLogoutRequest}>
+            <LogOut className="h-4 w-4" /> Logout
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function Sidebar({ portal = 'citizen', onOpenSearch, mobileOpen, onMobileOpenChange, collapsed: collapsedProp, onCollapsedChange }) {
+  const [collapsedState, setCollapsedState] = useState(readCollapsed);
+  const [mobileState, setMobileState] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const collapsed = collapsedProp ?? collapsedState;
+  const setCollapsed = (v) => {
+    try { localStorage.setItem(STORAGE_KEY, v ? '1' : '0'); } catch { /* ignore */ }
+    setCollapsedState(v);
+    onCollapsedChange?.(v);
+  };
+  const isMobileOpen = mobileOpen ?? mobileState;
+  const setMobileOpen = (v) => { setMobileState(v); onMobileOpenChange?.(v); };
+
+  useEffect(() => { onCollapsedChange?.(collapsed); /* eslint-disable-next-line */ }, []);
+
+  const confirmLogout = () => {
+    setLogoutOpen(false);
+    logout();
+    toast.success('You have been signed out.');
+    navigate('/auth/login');
+  };
+
+  const bodyProps = {
+    portal,
+    onLogoutRequest: () => setLogoutOpen(true),
+    onOpenSearch: () => { setMobileOpen(false); onOpenSearch?.(); },
+  };
+
+  return (
+    <>
+      {/* Mobile trigger */}
+      <div className="fixed left-3 top-3 z-50 md:hidden">
+        <Button variant="outline" size="icon" className="h-10 w-10 shadow-md" onClick={() => setMobileOpen(true)} aria-label="Open navigation">
+          <Menu className="h-5 w-5" />
+        </Button>
+      </div>
+
+      {/* Mobile sheet */}
+      <Sheet open={isMobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent side="left" className="w-[290px] p-0 [&>button]:z-20">
+          <SheetTitle className="sr-only">Navigation</SheetTitle>
+          <SheetDescription className="sr-only">Portal navigation menu</SheetDescription>
+          <SidebarBody {...bodyProps} collapsed={false} onToggleCollapse={() => {}} onNavigate={() => setMobileOpen(false)} />
+        </SheetContent>
+      </Sheet>
+
+      {/* Desktop sidebar */}
+      <motion.aside
+        initial={false}
+        animate={{ width: collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH }}
+        transition={{ type: 'spring', stiffness: 300, damping: 32 }}
+        className="fixed left-0 top-0 z-40 hidden h-screen border-r border-sidebar-border shadow-[4px_0_30px_hsl(var(--shadow-color)/0.06)] md:block"
+      >
+        <SidebarBody {...bodyProps} collapsed={collapsed} onToggleCollapse={() => setCollapsed(!collapsed)} onNavigate={undefined} />
+      </motion.aside>
+
+      <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign out of B.H.U.M.I?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You will need to sign in again to access your portal. Any unsaved form progress will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Stay signed in</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLogout} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Sign out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
