@@ -1625,7 +1625,6 @@ ROLES
        │            ├── TRANSFER_STATUS_HISTORY
        │            └── BLOCKCHAIN_TRANSACTIONS
        │                    └── BLOCKCHAIN_EVENTS
-       │
        ├── PROPERTY_OWNERS
        └── AUDIT_LOGS
 
