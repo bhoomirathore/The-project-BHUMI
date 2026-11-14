@@ -103,7 +103,7 @@ Currently, the repository is focused on delivering the **Core Transaction Pipeli
 
 ## 👥 8. The Core Team
 This project is being architected and developed by:
-- **Dev** - Team Lead, System Architecture &  Frontend UI/UX,
+- **Dev** - Team Lead, System Architecture , Backend Devloper   &  Frontend UI/UX,
 - **Ashutosh** - Backend APIs & System Integration
 - **Ayush** - Web3 Integration & Smart Contract Engineering
 - **Bhoomi** - Documentation & Database Design
