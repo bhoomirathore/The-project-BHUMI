@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Loader2, Search, RotateCcw, MapPin, AlertCircle } from 'lucide-react';
-import { getStates, getDistricts, getTehsils } from '../api/mock/locations';
+import { getDistricts, getTehsils } from '../api/mock/locations';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,28 +10,19 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 
 export default function VerifyLandForm({ onVerify, isLoading = false, onReset }) {
-  const [state, setState] = useState('Uttar Pradesh');
-  const [district, setDistrict] = useState('Lucknow');
-  const [tehsil, setTehsil] = useState('Lucknow Sadar');
+  const state = 'Madhya Pradesh';
+  const [district, setDistrict] = useState('Bhopal');
+  const [tehsil, setTehsil] = useState('Huzur');
   const [village, setVillage] = useState('');
   const [khasraNumber, setKhasraNumber] = useState('');
   const [error, setError] = useState('');
   const [touched, setTouched] = useState({ village: false, khasra: false });
 
-  const states = getStates();
   const districts = getDistricts(state);
   const tehsils = getTehsils(state, district);
 
   const villageInvalid = touched.village && !village.trim();
   const khasraInvalid = touched.khasra && !khasraNumber.trim();
-
-  const handleStateChange = (newState) => {
-    setState(newState);
-    const newDistricts = getDistricts(newState);
-    setDistrict(newDistricts[0] || '');
-    const newTehsils = getTehsils(newState, newDistricts[0] || '');
-    setTehsil(newTehsils[0] || '');
-  };
 
   const handleDistrictChange = (newDist) => {
     setDistrict(newDist);
@@ -59,6 +50,8 @@ export default function VerifyLandForm({ onVerify, isLoading = false, onReset })
   };
 
   const handleResetForm = () => {
+    setDistrict('Bhopal');
+    setTehsil('Huzur');
     setVillage('');
     setKhasraNumber('');
     setError('');
@@ -92,17 +85,14 @@ export default function VerifyLandForm({ onVerify, isLoading = false, onReset })
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="state">State *</Label>
-              <Select value={state} onValueChange={handleStateChange}>
-                <SelectTrigger id="state" aria-label="State">
-                  <SelectValue placeholder="Select state" />
-                </SelectTrigger>
-                <SelectContent>
-                  {states.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="state-display">State</Label>
+              <div
+                id="state-display"
+                className="flex h-10 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm font-medium text-foreground select-none"
+                aria-readonly="true"
+              >
+                Madhya Pradesh
+              </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -143,7 +133,7 @@ export default function VerifyLandForm({ onVerify, isLoading = false, onReset })
                 value={village}
                 onChange={(e) => setVillage(e.target.value)}
                 onBlur={() => setTouched((t) => ({ ...t, village: true }))}
-                placeholder="e.g., Rampur, Shyampur"
+                placeholder="e.g., Acharpura, Nazirabad"
                 aria-invalid={villageInvalid}
                 aria-describedby={villageInvalid ? 'village-error' : undefined}
                 required

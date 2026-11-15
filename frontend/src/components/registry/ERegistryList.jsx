@@ -2,12 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FileDown, Eye, Search, FileCheck2, Copy, Landmark, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '../../hooks/useAuth';
-import applicationService from '../../services/applicationService';
-import propertyService from '../../services/propertyService';
-import documentService from '../../services/documentService';
-import AppShell from '@/components/layout/AppShell';
-import PageHeader from '@/components/common/PageHeader';
+import { useAuth } from '@/hooks/useAuth';
+import applicationService from '@/services/applicationService';
+import propertyService from '@/services/propertyService';
+import documentService from '@/services/documentService';
 import Section from '@/components/common/Section';
 import EmptyState from '@/components/common/EmptyState';
 import { staggerContainer, staggerItem } from '@/components/common/Reveal';
@@ -27,10 +25,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { getDistricts } from '@/api/mock/locations';
 
 const ALL_DISTRICTS = '__all__';
 
-export default function CitizenDownloadRegistry() {
+export default function ERegistryList({ onCountChange }) {
   const { user } = useAuth();
   const [searchKhasra, setSearchKhasra] = useState('');
   const [searchDistrict, setSearchDistrict] = useState('');
@@ -56,8 +55,8 @@ export default function CitizenDownloadRegistry() {
                 transferId: a.id,
                 propertyId: a.propertyId,
                 khasra: prop?.khasraNumber || '123/1',
-                district: prop?.district || 'Lucknow',
-                location: `Village ${prop?.village || 'Rampur'}, Tehsil ${prop?.tehsil || 'Lucknow Sadar'}`,
+                district: prop?.district || 'Bhopal',
+                location: `Village ${prop?.village || 'Acharpura'}, Tehsil ${prop?.tehsil || 'Huzur'}`,
                 owner: a.buyerName || user.name,
                 area: prop ? `${prop.areaSqFt.toLocaleString()} sq. ft` : '2,500 sq. ft',
                 date: a.completedAt || a.approvedAt || '15-Jan-2026',
@@ -67,6 +66,9 @@ export default function CitizenDownloadRegistry() {
             });
 
           setCompletedApps(completed);
+          if (onCountChange) {
+            onCountChange(completed.length);
+          }
         } catch (err) {
           console.error(err);
         } finally {
@@ -106,74 +108,73 @@ export default function CitizenDownloadRegistry() {
 
   const copy = (text) => {
     navigator.clipboard.writeText(text);
-    toast.success('Copied');
+    toast.success('Copied to clipboard');
   };
 
-  const hasFilters = !!searchKhasra || !!searchDistrict;
+  const hasFilters = Boolean(searchKhasra || searchDistrict);
 
   return (
-    <AppShell portal="citizen">
-      <PageHeader
-        eyebrow="Citizen Portal"
-        title="Download E-Registry"
-        description="Access and download finalized digital certificates for completed land transfers"
-      />
-
-      {/* Filters */}
-      <Section title="Search Registry Documents" description="Filter certificates by Khasra number or District">
-        <Card className="shadow-card">
-          <CardContent className="grid grid-cols-1 items-end gap-4 p-5 sm:grid-cols-[1.5fr_1.5fr_auto] sm:p-6">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="searchKhasra">Khasra Number</Label>
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-                <Input
-                  id="searchKhasra"
-                  value={searchKhasra}
-                  onChange={(e) => setSearchKhasra(e.target.value)}
-                  placeholder="e.g., 123/1"
-                  className="pl-9"
-                />
-              </div>
+    <div className="space-y-6">
+      {/* Search and Filters */}
+      <Card className="shadow-card border-border/80 bg-card">
+        <CardContent className="grid grid-cols-1 items-end gap-4 p-5 sm:grid-cols-[1.5fr_1.5fr_auto]">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="searchKhasra">Khasra Number</Label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <Input
+                id="searchKhasra"
+                value={searchKhasra}
+                onChange={(e) => setSearchKhasra(e.target.value)}
+                placeholder="e.g., 123/1"
+                className="pl-9"
+              />
             </div>
+          </div>
 
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="searchDistrict">District</Label>
-              <Select
-                value={searchDistrict || ALL_DISTRICTS}
-                onValueChange={(v) => setSearchDistrict(v === ALL_DISTRICTS ? '' : v)}
-              >
-                <SelectTrigger id="searchDistrict" aria-label="District">
-                  <SelectValue placeholder="All Districts" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_DISTRICTS}>All Districts</SelectItem>
-                  <SelectItem value="Lucknow">Lucknow</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              disabled={!hasFilters}
-              onClick={() => {
-                setSearchKhasra('');
-                setSearchDistrict('');
-              }}
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="searchDistrict">District</Label>
+            <Select
+              value={searchDistrict || ALL_DISTRICTS}
+              onValueChange={(v) => setSearchDistrict(v === ALL_DISTRICTS ? '' : v)}
             >
-              <RotateCcw className="h-4 w-4" aria-hidden="true" />
-              Clear Filter
-            </Button>
-          </CardContent>
-        </Card>
-      </Section>
+              <SelectTrigger id="searchDistrict" aria-label="District">
+                <SelectValue placeholder="All Districts" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_DISTRICTS}>All Districts</SelectItem>
+                {getDistricts('Madhya Pradesh').map((d) => (
+                  <SelectItem key={d} value={d}>{d}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      {/* Certificates */}
-      <Section
-        title={`Available Registry Certificates (${filteredDocs.length})`}
-        description="Only completed and blockchain-synchronized transfers"
-      >
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!hasFilters}
+            onClick={() => {
+              setSearchKhasra('');
+              setSearchDistrict('');
+            }}
+            className="gap-1.5"
+          >
+            <RotateCcw className="h-4 w-4" aria-hidden="true" />
+            Clear
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Available Certificates List */}
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-foreground">
+            Available Registry Certificates ({filteredDocs.length})
+          </h3>
+          <span className="text-xs text-muted-foreground">Only completed, synchronized transfers</span>
+        </div>
+
         {loading ? (
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             {[0, 1].map((i) => (
@@ -189,7 +190,7 @@ export default function CitizenDownloadRegistry() {
             ))}
           </div>
         ) : filteredDocs.length === 0 ? (
-          <Card className="shadow-card">
+          <Card className="shadow-card border-border/80">
             <EmptyState
               icon={hasFilters ? Search : Landmark}
               title={hasFilters ? 'No matching certificates' : 'No certificates yet'}
@@ -212,15 +213,15 @@ export default function CitizenDownloadRegistry() {
           >
             {filteredDocs.map((doc) => (
               <motion.div key={doc.id} variants={staggerItem} className="h-full">
-                <Card className="card-interactive flex h-full flex-col shadow-card">
+                <Card className="card-interactive flex h-full flex-col shadow-card border-border/80 bg-card">
                   <CardContent className="flex h-full flex-col p-6">
                     <div className="mb-4 flex items-center justify-between gap-2">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-success/15 text-success-foreground">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-success/15 text-success">
                         <FileCheck2 className="h-5 w-5" aria-hidden="true" />
                       </div>
                       <Badge variant="success">Finalized &amp; Synchronized</Badge>
                     </div>
-                    <h3 className="text-lg font-bold text-foreground">Digital E-Registry Certificate</h3>
+                    <h4 className="text-base font-bold text-foreground">Digital E-Registry Certificate</h4>
                     <p className="mt-0.5 font-mono text-xs text-muted-foreground">{doc.id}</p>
 
                     <dl className="mt-4 grid grid-cols-1 gap-x-4 gap-y-2 text-xs sm:grid-cols-2">
@@ -266,14 +267,14 @@ export default function CitizenDownloadRegistry() {
                       </div>
                     </dl>
 
-                    <div className="mt-auto flex flex-wrap gap-2 border-t pt-4">
-                      <Button className="flex-1" onClick={() => handleDownload(doc.transferId)}>
-                        <FileDown className="h-4 w-4" aria-hidden="true" />
+                    <div className="mt-auto flex flex-wrap gap-2 border-t border-border/60 pt-4">
+                      <Button className="flex-1 min-h-[40px]" onClick={() => handleDownload(doc.transferId)}>
+                        <FileDown className="h-4 w-4 mr-1.5" aria-hidden="true" />
                         Download PDF
                       </Button>
-                      <Button variant="outline" onClick={() => setPreviewDoc(doc)}>
-                        <Eye className="h-4 w-4" aria-hidden="true" />
-                        Preview Certificate
+                      <Button variant="outline" className="min-h-[40px]" onClick={() => setPreviewDoc(doc)}>
+                        <Eye className="h-4 w-4 mr-1.5" aria-hidden="true" />
+                        Preview
                       </Button>
                     </div>
                   </CardContent>
@@ -282,10 +283,10 @@ export default function CitizenDownloadRegistry() {
             ))}
           </motion.div>
         )}
-      </Section>
+      </div>
 
-      {/* Preview dialog */}
-      <Dialog open={!!previewDoc} onOpenChange={(open) => { if (!open) setPreviewDoc(null); }}>
+      {/* Preview Dialog */}
+      <Dialog open={Boolean(previewDoc)} onOpenChange={(open) => { if (!open) setPreviewDoc(null); }}>
         <DialogContent className="sm:max-w-[560px]">
           {previewDoc && (
             <>
@@ -295,13 +296,13 @@ export default function CitizenDownloadRegistry() {
               </DialogHeader>
               <div className="rounded-xl border bg-muted/30 p-4">
                 <div className="border-b pb-3 text-center">
-                  <h4 className="text-sm font-bold text-foreground">B.H.U.M.I. (PROTOTYPE)</h4>
+                  <h4 className="text-sm font-bold text-foreground">B.H.U.M.I. (MADHYA PRADESH)</h4>
                   <p className="text-[0.7rem] uppercase tracking-wider text-muted-foreground">Digital Land Registry Certificate</p>
                 </div>
                 <dl className="mt-3 grid grid-cols-1 gap-y-2 font-mono text-xs sm:grid-cols-[150px_1fr]">
                   <dt className="font-bold text-muted-foreground">REGISTRY NUMBER</dt><dd className="text-foreground">{previewDoc.id}</dd>
                   <dt className="font-bold text-muted-foreground">TRANSFER REF</dt><dd className="text-foreground">{previewDoc.transferId}</dd>
-                  <dt className="font-bold text-muted-foreground">PARCEL ULPIN</dt><dd className="break-all text-foreground">{previewDoc.propertyId}</dd>
+                  <dt className="font-bold text-muted-foreground">PROPERTY ID</dt><dd className="break-all text-foreground">{previewDoc.propertyId}</dd>
                   <dt className="font-bold text-muted-foreground">KHASRA NUMBER</dt><dd className="text-foreground">{previewDoc.khasra}</dd>
                   <dt className="font-bold text-muted-foreground">TITLE HOLDER</dt><dd className="text-foreground">{previewDoc.owner}</dd>
                   <dt className="font-bold text-muted-foreground">LOCATION</dt><dd className="text-foreground">{previewDoc.location}</dd>
@@ -318,7 +319,7 @@ export default function CitizenDownloadRegistry() {
                     setPreviewDoc(null);
                   }}
                 >
-                  <FileDown className="h-4 w-4" aria-hidden="true" />
+                  <FileDown className="h-4 w-4 mr-1.5" aria-hidden="true" />
                   Download PDF
                 </Button>
               </DialogFooter>
@@ -326,6 +327,6 @@ export default function CitizenDownloadRegistry() {
           )}
         </DialogContent>
       </Dialog>
-    </AppShell>
+    </div>
   );
 }

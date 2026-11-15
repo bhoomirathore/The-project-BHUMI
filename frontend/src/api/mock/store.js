@@ -3,17 +3,84 @@
 
 import { INITIAL_USERS, INITIAL_PROPERTIES, INITIAL_APPLICATIONS } from './mockData';
 import { APPLICATION_STATUSES, BLOCKCHAIN_STATUSES, KYC_STATUSES, PAYMENT_STATUSES } from '../../utils/statuses';
+import { APPOINTMENT_PURPOSES } from '../../utils/appointmentPurposes';
+import { getSROOffices } from './locations';
 
 // Clone helper to prevent accidental cross-reference mutations
 const deepClone = (val) => JSON.parse(JSON.stringify(val));
 
 const delay = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const getRelativeDate = (daysAhead) => {
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  if (d.getDay() === 0) {
+    d.setDate(d.getDate() + 1);
+  }
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getDeterministicSlotState = (office, date, slot) => {
+  const str = `${office}_${date}_${slot}`;
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+  }
+  const rem = hash % 10;
+  if (rem <= 1) return 'FULL';
+  if (rem <= 4) return 'FEW_LEFT';
+  return 'AVAILABLE';
+};
+
 class MockStore {
   constructor() {
     this.users = deepClone(INITIAL_USERS);
     this.properties = deepClone(INITIAL_PROPERTIES);
     this.applications = deepClone(INITIAL_APPLICATIONS);
+
+    // Make APP-2026-002 appointment date relative (+5 days) for a live upcoming demo appointment
+    const app2 = this.applications.find((a) => a.id === 'APP-2026-002');
+    if (app2 && app2.appointment) {
+      app2.appointment.date = getRelativeDate(5);
+    }
+
+    // Seed appointments from existing application appointments
+    this.appointments = [];
+    let aptCount = 1;
+    this.applications.forEach((a) => {
+      if (a.appointment && a.appointment.office && a.appointment.date) {
+        const reference = `APT-2026-${String(aptCount).padStart(4, '0')}`;
+        const apt = {
+          id: `apt-${aptCount}`,
+          reference,
+          purpose: APPOINTMENT_PURPOSES.TRANSFER,
+          applicationId: a.id,
+          propertyId: a.propertyId,
+          office: a.appointment.office,
+          date: a.appointment.date,
+          slot: a.appointment.slot,
+          contactMobile: a.sellerPhone || '9876543210',
+          attendee: {
+            type: 'SELF',
+            name: a.sellerName,
+            mobile: a.sellerPhone || '9876543210',
+          },
+          assistanceNeeded: false,
+          notes: '',
+          status: 'SCHEDULED',
+          userId: a.sellerId,
+          createdAt: '2026-01-10T10:00:00Z',
+        };
+        this.appointments.push(apt);
+        // Ensure application.appointment has reference and purpose
+        a.appointment.reference = reference;
+        a.appointment.purpose = APPOINTMENT_PURPOSES.TRANSFER;
+        aptCount++;
+      }
+    });
   }
 
   // --- AUTH ---
@@ -142,7 +209,8 @@ class MockStore {
 
   async getAllApplications(statusFilter) {
     await delay();
-    let list = this.applications;
+    // Registrar queue must EXCLUDE DRAFT applications
+    let list = this.applications.filter((a) => a.applicationStatus !== APPLICATION_STATUSES.DRAFT);
     if (statusFilter && statusFilter !== 'ALL') {
       list = list.filter((a) => a.applicationStatus === statusFilter);
     }
@@ -160,7 +228,7 @@ class MockStore {
     return deepClone(app);
   }
 
-  async createApplication({ propertyId, seller, buyer, documents }) {
+  async createApplication({ propertyId, seller, buyer, documents = [] }) {
     await delay();
     const prop = this.properties.find((p) => p.propertyId === propertyId);
     if (!prop) {
@@ -184,6 +252,7 @@ class MockStore {
     // Mark property as Transfer in progress
     prop.status = 'Transfer in progress';
 
+    const isDraft = !documents || documents.length === 0;
     const newId = `APP-2026-${String(this.applications.length + 1).padStart(3, '0')}`;
     const newApp = {
       id: newId,
@@ -194,26 +263,30 @@ class MockStore {
       buyerId: buyer.id,
       buyerName: buyer.name,
       buyerPhone: buyer.phone || '9876543211',
-      applicationStatus: APPLICATION_STATUSES.SUBMITTED,
+      applicationStatus: isDraft ? APPLICATION_STATUSES.DRAFT : APPLICATION_STATUSES.SUBMITTED,
       kycStatus: KYC_STATUSES.PENDING,
       paymentStatus: PAYMENT_STATUSES.INITIATED,
       blockchainStatus: null,
       txHash: null,
-      submittedAt: new Date().toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: '2026',
-      }) + ', 10:00 AM',
+      submittedAt: isDraft
+        ? null
+        : new Date().toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: '2026',
+          }) + ', 10:00 AM',
       approvedAt: null,
       completedAt: null,
       appointment: null,
-      documents: documents.map((doc, idx) => ({
-        docId: `doc-${Date.now()}-${idx}`,
-        type: doc.type,
-        fileName: doc.fileName,
-        hash: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
-        integrity: 'MATCH',
-      })),
+      documents: isDraft
+        ? []
+        : documents.map((doc, idx) => ({
+            docId: `doc-${Date.now()}-${idx}`,
+            type: doc.type,
+            fileName: doc.fileName,
+            hash: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
+            integrity: 'MATCH',
+          })),
       checklist: {
         kycVerified: false,
         paymentReceived: false,
@@ -227,6 +300,80 @@ class MockStore {
 
     this.applications.unshift(newApp);
     return deepClone(newApp);
+  }
+
+  async addDocument(applicationId, { type, fileName, hash }) {
+    await delay();
+    const app = this.applications.find((a) => a.id === applicationId);
+    if (!app) {
+      const err = new Error(`Application ${applicationId} not found.`);
+      err.status = 404;
+      throw err;
+    }
+    if (app.applicationStatus !== APPLICATION_STATUSES.DRAFT) {
+      const err = new Error('Documents can only be modified while the application is in draft status.');
+      err.status = 400;
+      throw err;
+    }
+
+    if (!app.documents) {
+      app.documents = [];
+    }
+
+    const docHash = hash || `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
+    const existingIdx = app.documents.findIndex((d) => d.type === type);
+    const newDoc = {
+      docId: existingIdx >= 0 ? app.documents[existingIdx].docId : `doc-${Date.now()}-${type.toLowerCase()}`,
+      type,
+      fileName,
+      hash: docHash,
+      integrity: 'MATCH',
+    };
+
+    if (existingIdx >= 0) {
+      app.documents[existingIdx] = newDoc;
+    } else {
+      app.documents.push(newDoc);
+    }
+
+    return deepClone(app);
+  }
+
+  async submitApplication(applicationId) {
+    await delay();
+    const app = this.applications.find((a) => a.id === applicationId);
+    if (!app) {
+      const err = new Error(`Application ${applicationId} not found.`);
+      err.status = 404;
+      throw err;
+    }
+
+    const REQUIRED_DOC_TYPES = [
+      'SALE_DEED',
+      'IDENTITY_PROOF',
+      'LAND_MAP',
+      'ENCUMBRANCE_CERT',
+      'TAX_RECEIPT',
+    ];
+
+    const uploadedTypes = (app.documents || []).map((d) => d.type);
+    const allPresent = REQUIRED_DOC_TYPES.every((t) => uploadedTypes.includes(t));
+    if (!allPresent) {
+      const missing = REQUIRED_DOC_TYPES.filter((t) => !uploadedTypes.includes(t));
+      const err = new Error(`All 5 required documents must be uploaded before submitting. Missing: ${missing.join(', ')}`);
+      err.status = 400;
+      throw err;
+    }
+
+    app.applicationStatus = APPLICATION_STATUSES.SUBMITTED;
+    const now = new Date();
+    app.submittedAt = now.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: '2026',
+    }) + ', ' + now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    return deepClone(app);
   }
 
   // --- KYC ---
@@ -283,8 +430,214 @@ class MockStore {
     const app = this.applications.find((a) => a.id === applicationId);
     if (!app) throw new Error('Application not found');
 
-    app.appointment = { office, date, slot };
+    const reference = `APT-2026-${String(this.appointments.length + 1).padStart(4, '0')}`;
+    app.appointment = {
+      office,
+      date,
+      slot,
+      reference,
+      purpose: APPOINTMENT_PURPOSES.TRANSFER,
+    };
+
+    const apt = {
+      id: `apt-${Date.now()}`,
+      reference,
+      purpose: APPOINTMENT_PURPOSES.TRANSFER,
+      applicationId: app.id,
+      propertyId: app.propertyId,
+      office,
+      date,
+      slot,
+      contactMobile: app.sellerPhone || '9876543210',
+      attendee: { type: 'SELF', name: app.sellerName, mobile: app.sellerPhone },
+      assistanceNeeded: false,
+      notes: '',
+      status: 'SCHEDULED',
+      userId: app.sellerId,
+      createdAt: new Date().toISOString(),
+    };
+    this.appointments.push(apt);
+
     return deepClone(app);
+  }
+
+  async createAppointment({
+    purpose,
+    applicationId,
+    propertyId,
+    office,
+    date,
+    slot,
+    contactMobile,
+    attendee = { type: 'SELF' },
+    assistanceNeeded = false,
+    notes = '',
+    userId,
+  }) {
+    await delay();
+
+    // 1. Office exists
+    const validOffices = getSROOffices();
+    if (!validOffices.includes(office)) {
+      const err = new Error(`Invalid Sub-Registrar Office: ${office}`);
+      err.status = 400;
+      throw err;
+    }
+
+    // 2. Date validation: future, within 60 days, not a Sunday
+    if (!date) {
+      const err = new Error('Appointment date is required.');
+      err.status = 400;
+      throw err;
+    }
+
+    const apptDate = new Date(`${date}T00:00:00`);
+    if (isNaN(apptDate.getTime())) {
+      const err = new Error('Invalid appointment date format.');
+      err.status = 400;
+      throw err;
+    }
+
+    if (apptDate.getDay() === 0) {
+      const err = new Error('Sub-Registrar Offices are closed on Sundays.');
+      err.status = 400;
+      throw err;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + 60);
+
+    if (apptDate <= today) {
+      const err = new Error('Appointment date must be in the future.');
+      err.status = 400;
+      throw err;
+    }
+
+    if (apptDate > maxDate) {
+      const err = new Error('Appointments can only be booked up to 60 days in advance.');
+      err.status = 400;
+      throw err;
+    }
+
+    // 3. Slot is not FULL
+    const availability = this.getSlotAvailability(office, date);
+    if (availability[slot] === 'FULL') {
+      const err = new Error('The selected time slot is full. Please choose another slot.');
+      err.status = 400;
+      throw err;
+    }
+
+    // 4. Purpose is valid
+    if (!Object.values(APPOINTMENT_PURPOSES).includes(purpose)) {
+      const err = new Error(`Invalid appointment purpose: ${purpose}`);
+      err.status = 400;
+      throw err;
+    }
+
+    // 5. If applicationId is given, validate application
+    let app = null;
+    if (applicationId) {
+      app = this.applications.find((a) => a.id === applicationId);
+      if (!app) {
+        const err = new Error(`Application ${applicationId} not found.`);
+        err.status = 404;
+        throw err;
+      }
+      if (userId && app.sellerId !== userId && app.buyerId !== userId) {
+        const err = new Error('You do not have access to this application.');
+        err.status = 403;
+        throw err;
+      }
+      if (app.appointment && app.appointment.date) {
+        const err = new Error('This application already has an appointment.');
+        err.status = 400;
+        throw err;
+      }
+    }
+
+    const reference = `APT-2026-${String(this.appointments.length + 1).padStart(4, '0')}`;
+
+    // When applicationId is present, also set application.appointment
+    if (app) {
+      app.appointment = {
+        office,
+        date,
+        slot,
+        reference,
+        purpose,
+      };
+    }
+
+    const newAppointment = {
+      id: `apt-${Date.now()}`,
+      reference,
+      purpose,
+      applicationId: applicationId || null,
+      propertyId: propertyId || (app ? app.propertyId : null),
+      office,
+      date,
+      slot,
+      contactMobile: contactMobile || '',
+      attendee,
+      assistanceNeeded: Boolean(assistanceNeeded),
+      notes: notes || '',
+      status: 'SCHEDULED',
+      userId: userId || (app ? app.sellerId : 'usr-citizen-rajesh'),
+      createdAt: new Date().toISOString(),
+    };
+
+    this.appointments.push(newAppointment);
+    return deepClone(newAppointment);
+  }
+
+  getSlotAvailability(office, date) {
+    const slots = ['10:00 AM', '11:30 AM', '02:00 PM', '04:00 PM'];
+    const res = {};
+    slots.forEach((s) => {
+      const booked = this.appointments.filter(
+        (a) => a.office === office && a.date === date && a.slot === s && a.status === 'SCHEDULED'
+      );
+      if (booked.length >= 2) {
+        res[s] = 'FULL';
+      } else {
+        let state = getDeterministicSlotState(office, date, s);
+        if (booked.length > 0 && state === 'AVAILABLE') {
+          state = 'FEW_LEFT';
+        }
+        res[s] = state;
+      }
+    });
+    return res;
+  }
+
+  async getUserAppointments(userId) {
+    await delay();
+    const list = this.appointments.filter((a) => a.userId === userId);
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const upcoming = list
+      .filter((a) => a.date >= todayStr && a.status === 'SCHEDULED')
+      .sort((a, b) => a.date.localeCompare(b.date) || a.slot.localeCompare(b.slot));
+
+    const past = list
+      .filter((a) => a.date < todayStr || a.status !== 'SCHEDULED')
+      .sort((a, b) => b.date.localeCompare(a.date) || b.slot.localeCompare(a.slot));
+
+    const combined = [...upcoming, ...past].map((apt) => {
+      const linkedApp = apt.applicationId
+        ? this.applications.find((a) => a.id === apt.applicationId)
+        : null;
+      return {
+        ...apt,
+        applicationStatus: linkedApp ? linkedApp.applicationStatus : null,
+        isDraft: linkedApp ? linkedApp.applicationStatus === APPLICATION_STATUSES.DRAFT : false,
+      };
+    });
+
+    return deepClone(combined);
   }
 
   // --- DOCUMENT INTEGRITY ---

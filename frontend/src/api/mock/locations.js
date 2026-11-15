@@ -1,27 +1,107 @@
 // Locations list containing only states, districts, and tehsils that have demo data.
-// Demo geography: Uttar Pradesh / Lucknow throughout (Assumption A4).
+// Demo geography: Madhya Pradesh throughout.
 
 export const LOCATIONS_DATA = [
   {
-    state: 'Uttar Pradesh',
+    state: 'Madhya Pradesh',
     districts: [
       {
-        district: 'Lucknow',
+        district: 'Bhopal',
         tehsils: [
           {
-            tehsil: 'Lucknow Sadar',
-            sroOffice: 'Lucknow Sadar Sub-Registrar Office',
-            villages: ['Rampur', 'Shyampur', 'Kalli Pashchim', 'Gosainganj'],
+            tehsil: 'Huzur',
+            sroOffice: 'Huzur Sub-Registrar Office',
+            villages: ['Acharpura', 'Barkheda Bondar', 'Bilkhiriya Kalan', 'Bhauri'],
           },
           {
-            tehsil: 'Bakshi Ka Talab',
-            sroOffice: 'Bakshi Ka Talab Sub-Registrar Office',
-            villages: ['Barauna', 'Mandiaon', 'Asthi', 'Kathwara'],
+            tehsil: 'Berasia',
+            sroOffice: 'Berasia Sub-Registrar Office',
+            villages: ['Nazirabad', 'Lalariya', 'Harrakheda', 'Gunga'],
           },
           {
-            tehsil: 'Mohanlalganj',
-            sroOffice: 'Mohanlalganj Sub-Registrar Office',
-            villages: ['Nagram', 'Sisendi', 'Khujahi', 'Jabirela'],
+            tehsil: 'Kolar',
+            sroOffice: 'Kolar Sub-Registrar Office',
+            villages: ['Amrabad Kalan', 'Deepdi', 'Pipaliya Rani', 'Samarda'],
+          },
+        ],
+      },
+      {
+        district: 'Indore',
+        tehsils: [
+          {
+            tehsil: 'Sanwer',
+            sroOffice: 'Sanwer Sub-Registrar Office',
+            villages: ['Ajnod', 'Alwasa', 'Dharmat', 'Kankariya Pal'],
+          },
+          {
+            tehsil: 'Depalpur',
+            sroOffice: 'Depalpur Sub-Registrar Office',
+            villages: ['Betma Khurd', 'Ghatabillod', 'Machal', 'Banedia'],
+          },
+          {
+            tehsil: 'Mhow',
+            sroOffice: 'Mhow Sub-Registrar Office',
+            villages: ['Badgonda', 'Choral', 'Datoda', 'Harsola'],
+          },
+        ],
+      },
+      {
+        district: 'Jabalpur',
+        tehsils: [
+          {
+            tehsil: 'Patan',
+            sroOffice: 'Patan Sub-Registrar Office',
+            villages: ['Belkheda', 'Shahpura', 'Katangi', 'Majholi'],
+          },
+          {
+            tehsil: 'Sihora',
+            sroOffice: 'Sihora Sub-Registrar Office',
+            villages: ['Gosalpur', 'Agariya', 'Khitola', 'Darshani'],
+          },
+          {
+            tehsil: 'Panagar',
+            sroOffice: 'Panagar Sub-Registrar Office',
+            villages: ['Panagar Rural', 'Umarariya', 'Baghraji', 'Padwar'],
+          },
+        ],
+      },
+      {
+        district: 'Gwalior',
+        tehsils: [
+          {
+            tehsil: 'Gwalior',
+            sroOffice: 'Gwalior Sub-Registrar Office',
+            villages: ['Morar', 'Hastinapur', 'Maharajpura', 'Baraua'],
+          },
+          {
+            tehsil: 'Dabra',
+            sroOffice: 'Dabra Sub-Registrar Office',
+            villages: ['Beru', 'Deora', 'Simiriya', 'Chutarpura'],
+          },
+          {
+            tehsil: 'Bhitarwar',
+            sroOffice: 'Bhitarwar Sub-Registrar Office',
+            villages: ['Bagwai', 'Bajna', 'Bamor', 'Pawaya'],
+          },
+        ],
+      },
+      {
+        district: 'Ujjain',
+        tehsils: [
+          {
+            tehsil: 'Ujjain',
+            sroOffice: 'Ujjain Sub-Registrar Office',
+            villages: ['Tajpur', 'Lekoda', 'Chandesari', 'Narwar'],
+          },
+          {
+            tehsil: 'Badnagar',
+            sroOffice: 'Badnagar Sub-Registrar Office',
+            villages: ['Jahangirpur', 'Runija', 'Ingoria', 'Maulabad'],
+          },
+          {
+            tehsil: 'Mahidpur',
+            sroOffice: 'Mahidpur Sub-Registrar Office',
+            villages: ['Jharda', 'Baijnath', 'Baloda', 'Indokh'],
           },
         ],
       },
@@ -43,8 +123,24 @@ export const getTehsils = (stateName, districtName) => {
   return distObj ? distObj.tehsils.map((t) => t.tehsil) : [];
 };
 
-export const getSROOffices = () => [
-  'Lucknow Sadar Sub-Registrar Office',
-  'Bakshi Ka Talab Sub-Registrar Office',
-  'Mohanlalganj Sub-Registrar Office',
-];
+export const getSROOffices = () => {
+  const offices = [];
+  LOCATIONS_DATA.forEach((s) => {
+    s.districts.forEach((d) => {
+      d.tehsils.forEach((t) => {
+        if (t.sroOffice) offices.push(t.sroOffice);
+      });
+    });
+  });
+  return offices;
+};
+
+export const getSROOfficesByDistrict = (districtName) => {
+  for (const s of LOCATIONS_DATA) {
+    const dist = s.districts.find((d) => d.district === districtName);
+    if (dist) {
+      return dist.tehsils.map((t) => t.sroOffice).filter(Boolean);
+    }
+  }
+  return [];
+};

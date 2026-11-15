@@ -1,4 +1,4 @@
-// Single consistent demo story, all dates in 2026, all places in Uttar Pradesh / Lucknow.
+// Single consistent demo story, all dates in 2026, all places in Madhya Pradesh.
 // People:
 // 1. Citizen (seller): "Rajesh Kumar Singh"
 // 2. Buyer: "Suresh Kumar Singh"
@@ -50,12 +50,12 @@ export const INITIAL_USERS = [
 
 export const INITIAL_PROPERTIES = [
   {
-    propertyId: 'B.H.U.M.I-2026-UP-984210',
+    propertyId: 'B.H.U.M.I-2026-MP-984210',
     khasraNumber: '123/1',
-    state: 'Uttar Pradesh',
-    district: 'Lucknow',
-    tehsil: 'Lucknow Sadar',
-    village: 'Rampur',
+    state: 'Madhya Pradesh',
+    district: 'Bhopal',
+    tehsil: 'Huzur',
+    village: 'Acharpura',
     areaSqFt: 2500,
     landType: 'Residential',
     status: 'Active',
@@ -72,12 +72,12 @@ export const INITIAL_PROPERTIES = [
     ],
   },
   {
-    propertyId: 'B.H.U.M.I-2026-UP-984211',
+    propertyId: 'B.H.U.M.I-2026-MP-984211',
     khasraNumber: '456/2',
-    state: 'Uttar Pradesh',
-    district: 'Lucknow',
-    tehsil: 'Lucknow Sadar',
-    village: 'Shyampur',
+    state: 'Madhya Pradesh',
+    district: 'Bhopal',
+    tehsil: 'Berasia',
+    village: 'Nazirabad',
     areaSqFt: 1800,
     landType: 'Residential',
     status: 'Transfer in progress',
@@ -86,12 +86,12 @@ export const INITIAL_PROPERTIES = [
     history: [],
   },
   {
-    propertyId: 'B.H.U.M.I-2026-UP-984212',
+    propertyId: 'B.H.U.M.I-2026-MP-984212',
     khasraNumber: '789/3',
-    state: 'Uttar Pradesh',
-    district: 'Lucknow',
-    tehsil: 'Bakshi Ka Talab',
-    village: 'Barauna',
+    state: 'Madhya Pradesh',
+    district: 'Bhopal',
+    tehsil: 'Kolar',
+    village: 'Pipaliya Rani',
     areaSqFt: 3200,
     landType: 'Agricultural',
     status: 'Transfer in progress',
@@ -100,12 +100,12 @@ export const INITIAL_PROPERTIES = [
     history: [],
   },
   {
-    propertyId: 'B.H.U.M.I-2026-UP-984213',
+    propertyId: 'B.H.U.M.I-2026-MP-984213',
     khasraNumber: '101/4',
-    state: 'Uttar Pradesh',
-    district: 'Lucknow',
-    tehsil: 'Mohanlalganj',
-    village: 'Nagram',
+    state: 'Madhya Pradesh',
+    district: 'Indore',
+    tehsil: 'Sanwer',
+    village: 'Ajnod',
     areaSqFt: 4100,
     landType: 'Agricultural',
     status: 'Transfer in progress',
@@ -114,12 +114,12 @@ export const INITIAL_PROPERTIES = [
     history: [],
   },
   {
-    propertyId: 'B.H.U.M.I-2026-UP-984214',
+    propertyId: 'B.H.U.M.I-2026-MP-984214',
     khasraNumber: '202/5',
-    state: 'Uttar Pradesh',
-    district: 'Lucknow',
-    tehsil: 'Lucknow Sadar',
-    village: 'Kalli Pashchim',
+    state: 'Madhya Pradesh',
+    district: 'Indore',
+    tehsil: 'Depalpur',
+    village: 'Betma Khurd',
     areaSqFt: 1500,
     landType: 'Commercial',
     status: 'Transfer in progress',
@@ -171,7 +171,7 @@ export const INITIAL_APPLICATIONS = [
   // 1. One COMPLETED (with tx hash, SYNCED)
   {
     id: 'APP-2026-001',
-    propertyId: 'B.H.U.M.I-2026-UP-984210',
+    propertyId: 'B.H.U.M.I-2026-MP-984210',
     sellerId: 'usr-citizen-rajesh',
     sellerName: 'Rajesh Kumar Singh',
     sellerPhone: '9876543210',
@@ -187,7 +187,7 @@ export const INITIAL_APPLICATIONS = [
     approvedAt: '12-Jan-2026, 02:15 PM',
     completedAt: '15-Jan-2026, 04:00 PM',
     appointment: {
-      office: 'Lucknow Sadar Sub-Registrar Office',
+      office: 'Huzur Sub-Registrar Office',
       date: '2026-01-14',
       slot: '10:00 AM',
     },
@@ -206,7 +206,7 @@ export const INITIAL_APPLICATIONS = [
   // 2. One UNDER_VERIFICATION
   {
     id: 'APP-2026-002',
-    propertyId: 'B.H.U.M.I-2026-UP-984211',
+    propertyId: 'B.H.U.M.I-2026-MP-984211',
     sellerId: 'usr-citizen-rajesh',
     sellerName: 'Rajesh Kumar Singh',
     sellerPhone: '9876543210',
@@ -222,7 +222,7 @@ export const INITIAL_APPLICATIONS = [
     approvedAt: null,
     completedAt: null,
     appointment: {
-      office: 'Lucknow Sadar Sub-Registrar Office',
+      office: 'Berasia Sub-Registrar Office',
       date: '2026-02-12',
       slot: '11:30 AM',
     },
@@ -241,7 +241,7 @@ export const INITIAL_APPLICATIONS = [
   // 3. One with payment FAILED
   {
     id: 'APP-2026-003',
-    propertyId: 'B.H.U.M.I-2026-UP-984212',
+    propertyId: 'B.H.U.M.I-2026-MP-984212',
     sellerId: 'usr-citizen-rajesh',
     sellerName: 'Rajesh Kumar Singh',
     sellerPhone: '9876543210',
@@ -273,7 +273,7 @@ export const INITIAL_APPLICATIONS = [
   // 4. One with blockchain SYNC_FAILED
   {
     id: 'APP-2026-004',
-    propertyId: 'B.H.U.M.I-2026-UP-984213',
+    propertyId: 'B.H.U.M.I-2026-MP-984213',
     sellerId: 'usr-citizen-rajesh',
     sellerName: 'Rajesh Kumar Singh',
     sellerPhone: '9876543210',
@@ -290,7 +290,7 @@ export const INITIAL_APPLICATIONS = [
     approvedAt: '22-Feb-2026, 11:30 AM',
     completedAt: null,
     appointment: {
-      office: 'Mohanlalganj Sub-Registrar Office',
+      office: 'Sanwer Sub-Registrar Office',
       date: '2026-02-24',
       slot: '02:00 PM',
     },
@@ -309,7 +309,7 @@ export const INITIAL_APPLICATIONS = [
   // 5. One with a document whose integrity check returns MISMATCH
   {
     id: 'APP-2026-005',
-    propertyId: 'B.H.U.M.I-2026-UP-984214',
+    propertyId: 'B.H.U.M.I-2026-MP-984214',
     sellerId: 'usr-citizen-rajesh',
     sellerName: 'Rajesh Kumar Singh',
     sellerPhone: '9876543210',
@@ -325,7 +325,7 @@ export const INITIAL_APPLICATIONS = [
     approvedAt: null,
     completedAt: null,
     appointment: {
-      office: 'Lucknow Sadar Sub-Registrar Office',
+      office: 'Depalpur Sub-Registrar Office',
       date: '2026-02-28',
       slot: '04:00 PM',
     },

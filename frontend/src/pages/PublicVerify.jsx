@@ -168,8 +168,8 @@ export default function PublicVerify() {
               <div>
                 <h3 className="mb-1 text-base font-bold">Own a registered property?</h3>
                 <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
-                  Citizens can sign in to initiate a land transfer application, track application
-                  status, and download e-Registry certificates.
+                  Citizens can sign in to book an appointment, initiate a property transfer, track application
+                  status, and access digital E-Registry certificates.
                 </p>
               </div>
               <Button asChild className="shrink-0 font-bold">

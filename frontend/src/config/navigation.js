@@ -1,11 +1,9 @@
 import {
   LayoutDashboard,
   Landmark,
-  ArrowLeftRight,
   FileText,
   SearchCheck,
   CalendarClock,
-  FileDown,
   ClipboardList,
   Fingerprint,
   Blocks,
@@ -24,22 +22,22 @@ export const PORTAL_NAV = {
   citizen: [
     {
       label: 'Overview',
-      links: [{ to: '/citizen/dashboard', label: 'Dashboard', icon: LayoutDashboard, keywords: 'home overview' }],
-    },
-    {
-      label: 'Property & Transfers',
       links: [
-        { to: '/citizen/properties', label: 'My Properties', icon: Landmark, keywords: 'land parcels khasra' },
-        { to: '/citizen/new-transfer', label: 'New Transfer', icon: ArrowLeftRight, keywords: 'mutation sale transfer' },
-        { to: '/citizen/applications', label: 'My Applications', icon: FileText, keywords: 'status track' },
+        { to: '/citizen/dashboard', label: 'Dashboard', icon: LayoutDashboard, keywords: 'home overview' },
       ],
     },
     {
-      label: 'Land Services',
+      label: 'Services',
       links: [
-        { to: '/citizen/verify-land', label: 'Verify Land', icon: SearchCheck, keywords: 'khasra ownership check' },
-        { to: '/citizen/book-appointment', label: 'Book Appointment', icon: CalendarClock, keywords: 'slot registrar office' },
-        { to: '/citizen/download-registry', label: 'Download E-Registry', icon: FileDown, keywords: 'certificate pdf' },
+        { to: '/citizen/book-appointment', label: 'Book Appointment', icon: CalendarClock, keywords: 'appointment slot visit transfer registrar office' },
+        { to: '/citizen/verify-land', label: 'Verify Land & E-Registry', icon: SearchCheck, keywords: 'verify land certificate e-registry khasra download ownership' },
+      ],
+    },
+    {
+      label: 'My Records',
+      links: [
+        { to: '/citizen/properties', label: 'My Properties', icon: Landmark, keywords: 'land properties parcels khasra' },
+        { to: '/citizen/applications', label: 'My Applications', icon: FileText, keywords: 'status track applications transfers' },
       ],
     },
   ],

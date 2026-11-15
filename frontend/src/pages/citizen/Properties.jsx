@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, Search, MapPin, Ruler, Landmark, ArrowRight, Copy, Layers } from 'lucide-react';
+import { Plus, Search, MapPin, Ruler, Landmark, ArrowRight, Copy, Layers, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../../hooks/useAuth';
 import propertyService from '../../services/propertyService';
@@ -86,9 +86,9 @@ export default function CitizenProperties() {
         title="My Properties"
         description="Registered land parcels under your ownership record"
         actions={
-          <Button onClick={() => navigate('/citizen/new-transfer')}>
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            New Transfer Application
+          <Button onClick={() => navigate('/citizen/book-appointment?purpose=TRANSFER')}>
+            <CalendarDays className="h-4 w-4" aria-hidden="true" />
+            Book Appointment
           </Button>
         }
       />
@@ -272,8 +272,8 @@ export default function CitizenProperties() {
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </Button>
                 ) : (
-                  <Button onClick={() => navigate(`/citizen/new-transfer?propertyId=${selected.propertyId}`)}>
-                    Initiate Transfer
+                  <Button onClick={() => navigate(`/citizen/book-appointment?purpose=TRANSFER&propertyId=${selected.propertyId}`)}>
+                    Book Transfer Appointment
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </Button>
                 )}

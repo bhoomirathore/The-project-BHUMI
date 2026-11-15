@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './routes/ProtectedRoute';
 
@@ -10,12 +10,10 @@ import Register from './pages/auth/Register';
 
 import CitizenDashboard from './pages/citizen/Dashboard';
 import CitizenProperties from './pages/citizen/Properties';
-import CitizenNewTransfer from './pages/citizen/NewTransfer';
 import CitizenApplications from './pages/citizen/Applications';
 import CitizenApplicationDetail from './pages/citizen/ApplicationDetail';
 import CitizenVerifyLand from './pages/citizen/VerifyLand';
 import CitizenBookAppointment from './pages/citizen/BookAppointment';
-import CitizenDownloadRegistry from './pages/citizen/DownloadRegistry';
 
 import AuthorityDashboard from './pages/authority/Dashboard';
 import AuthorityApplicationQueue from './pages/authority/ApplicationQueue';
@@ -27,6 +25,21 @@ import GovernmentDashboard from './pages/government/Dashboard';
 import GovernmentAnalytics from './pages/government/Analytics';
 import GovernmentMonitoring from './pages/government/Monitoring';
 import GovernmentDisputes from './pages/government/Disputes';
+
+// Redirect helpers preserving query params
+function RedirectNewTransfer() {
+  const location = useLocation();
+  const search = new URLSearchParams(location.search);
+  search.set('purpose', 'TRANSFER');
+  return <Navigate to={`/citizen/book-appointment?${search.toString()}`} replace />;
+}
+
+function RedirectDownloadRegistry() {
+  const location = useLocation();
+  const search = new URLSearchParams(location.search);
+  search.set('tab', 'registry');
+  return <Navigate to={`/citizen/verify-land?${search.toString()}`} replace />;
+}
 
 export default function App() {
   return (
@@ -46,7 +59,6 @@ export default function App() {
           <Route path="/auth/register" element={<Register />} />
           <Route path="/register" element={<Navigate to="/auth/register" replace />} />
 
-
           {/* Citizen Portal Routes (Protected: CITIZEN) */}
           <Route
             path="/citizen/dashboard"
@@ -64,11 +76,20 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          {/* Backward compatibility redirects */}
           <Route
             path="/citizen/new-transfer"
             element={
               <ProtectedRoute allowedRoles={['CITIZEN']}>
-                <CitizenNewTransfer />
+                <RedirectNewTransfer />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/citizen/download-registry"
+            element={
+              <ProtectedRoute allowedRoles={['CITIZEN']}>
+                <RedirectDownloadRegistry />
               </ProtectedRoute>
             }
           />
@@ -104,14 +125,6 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/citizen/download-registry"
-            element={
-              <ProtectedRoute allowedRoles={['CITIZEN']}>
-                <CitizenDownloadRegistry />
-              </ProtectedRoute>
-            }
-          />
 
           {/* Authority Portal Routes (Protected: REGISTRAR) */}
           <Route
@@ -137,10 +150,6 @@ export default function App() {
                 <AuthorityVerification />
               </ProtectedRoute>
             }
-          />
-          <Route
-            path="/authority/verification"
-            element={<Navigate to="/authority/applications" replace />}
           />
           <Route
             path="/authority/ekyc"
@@ -193,7 +202,7 @@ export default function App() {
             }
           />
 
-          {/* Fallback */}
+          {/* Catch-all redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
