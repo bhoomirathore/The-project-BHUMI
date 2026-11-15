@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowRight,
@@ -19,11 +19,12 @@ import {
 import { toast } from 'sonner';
 import MutationStepper from '../../components/MutationStepper';
 import TransactionStatusPill from '../../components/TransactionStatusPill';
+import DocumentUploadList from '@/components/application/DocumentUploadList';
 import applicationService from '../../services/applicationService';
 import kycService from '../../services/kycService';
 import paymentService from '../../services/paymentService';
 import propertyService from '../../services/propertyService';
-import { DOCUMENT_TYPE_LABELS } from '../../utils/statuses';
+import { DOCUMENT_TYPE_LABELS, APPLICATION_STATUSES } from '../../utils/statuses';
 import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/common/PageHeader';
 import EmptyState from '@/components/common/EmptyState';
@@ -46,6 +47,7 @@ function Row({ label, children, last }) {
 export default function CitizenApplicationDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [application, setApplication] = useState(null);
   const [property, setProperty] = useState(null);
@@ -71,6 +73,18 @@ export default function CitizenApplicationDetail() {
   useEffect(() => {
     loadData();
   }, [id]);
+
+  useEffect(() => {
+    if (!loading && application) {
+      if (window.location.hash === '#documents' || searchParams.get('focus') === 'documents') {
+        const el = document.getElementById('documents-card');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+          el.focus();
+        }
+      }
+    }
+  }, [loading, application, searchParams]);
 
   const handleStartKyc = async () => {
     setActionLoading(true);
@@ -238,7 +252,7 @@ export default function CitizenApplicationDetail() {
             </CardHeader>
             <CardContent className="p-5 pt-0">
               <dl>
-                <Row label="Property ID (ULPIN):">
+                <Row label="Property ID:">
                   <span className="font-mono font-bold">{application.propertyId}</span>
                 </Row>
                 <Row label="Khasra Number:"><span className="font-bold">{property?.khasraNumber}</span></Row>
@@ -273,18 +287,26 @@ export default function CitizenApplicationDetail() {
             </CardContent>
           </Card>
 
-          {/* Documents */}
-          <Card className="shadow-card">
+          {/* Documents Card */}
+          <Card id="documents-card" tabIndex={-1} className="shadow-card outline-none">
             <CardHeader className="flex-row items-center gap-3 space-y-0 p-5 pb-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <FileText className="h-4 w-4" aria-hidden="true" />
               </div>
               <CardTitle className="text-base">
-                Submitted Deeds &amp; Certs ({application.documents?.length || 0})
+                {application.applicationStatus === APPLICATION_STATUSES.DRAFT
+                  ? 'Required Documents'
+                  : `Submitted Deeds & Certs (${application.documents?.length || 0})`}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-5 pt-0">
-              {(application.documents || []).length === 0 ? (
+              {application.applicationStatus === APPLICATION_STATUSES.DRAFT ? (
+                <DocumentUploadList
+                  applicationId={application.id}
+                  documents={application.documents || []}
+                  onDocumentsUpdated={loadData}
+                />
+              ) : (application.documents || []).length === 0 ? (
                 <p className="text-xs text-muted-foreground">No documents attached.</p>
               ) : (
                 <ul className="flex flex-col gap-2">

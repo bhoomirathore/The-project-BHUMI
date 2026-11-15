@@ -44,6 +44,22 @@ export const applicationService = {
     // TODO(api-contract): path not yet defined in docs
     return await apiClient.post('/applications', data);
   },
+
+  async addDocument(applicationId, docData) {
+    if (isMockMode()) {
+      return await mockStore.addDocument(applicationId, docData);
+    }
+    // TODO(api-contract): path not yet defined in docs
+    return await apiClient.post(`/applications/${encodeURIComponent(applicationId)}/documents`, docData);
+  },
+
+  async submitApplication(applicationId) {
+    if (isMockMode()) {
+      return await mockStore.submitApplication(applicationId);
+    }
+    // TODO(api-contract): path not yet defined in docs
+    return await apiClient.post(`/applications/${encodeURIComponent(applicationId)}/submit`);
+  },
 };
 
 export default applicationService;

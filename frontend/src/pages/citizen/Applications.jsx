@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, ArrowRight, FileText } from 'lucide-react';
+import { CalendarDays, Search, ArrowRight, FileText, UploadCloud } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import applicationService from '../../services/applicationService';
 import TransactionStatusPill from '../../components/TransactionStatusPill';
@@ -32,6 +32,7 @@ function matchesFilter(app, filter) {
   const s = app.applicationStatus;
   switch (filter) {
     case 'in_progress':
+      // DRAFT is treated as in-progress (awaiting citizen document upload)
       return !['COMPLETED', 'REJECTED', 'FAILED'].includes(s);
     case 'completed':
       return s === 'COMPLETED';
@@ -87,14 +88,14 @@ export default function CitizenApplications() {
         title="My Applications"
         description="Track the progress of your land transfer applications"
         actions={
-          <Button onClick={() => navigate('/citizen/new-transfer')}>
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            New Transfer
+          <Button onClick={() => navigate('/citizen/book-appointment?purpose=TRANSFER')} className="gap-2 font-bold min-h-[44px]">
+            <CalendarDays className="h-4 w-4" aria-hidden="true" />
+            Book Appointment
           </Button>
         }
       />
 
-      <Card className="overflow-hidden shadow-card">
+      <Card className="overflow-hidden shadow-card border-border/80 bg-card">
         <div className="flex flex-col gap-3 border-b bg-muted/30 p-4 sm:p-5">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-base font-bold sm:text-lg">
@@ -117,7 +118,7 @@ export default function CitizenApplications() {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
               <Input
                 aria-label="Search applications"
-                placeholder="Search by ID, parcel or buyer"
+                placeholder="Search by ID, property or buyer"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="bg-background pl-9"
@@ -151,11 +152,11 @@ export default function CitizenApplications() {
           <EmptyState
             icon={FileText}
             title="No transfer applications found"
-            description="Start a new transfer to track its mutation workflow here."
+            description="Book an appointment to initiate a property transfer and track its mutation workflow here."
             action={
-              <Button onClick={() => navigate('/citizen/new-transfer')}>
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                New Transfer
+              <Button onClick={() => navigate('/citizen/book-appointment?purpose=TRANSFER')} className="gap-2">
+                <CalendarDays className="h-4 w-4" aria-hidden="true" />
+                Book Appointment
               </Button>
             }
           />
@@ -197,15 +198,33 @@ export default function CitizenApplications() {
                     <TableCell className="px-4 py-3 font-mono font-bold text-foreground">{app.id}</TableCell>
                     <TableCell className="px-4 py-3 font-mono text-muted-foreground">{app.propertyId}</TableCell>
                     <TableCell className="px-4 py-3 font-medium text-foreground">{app.buyerName}</TableCell>
-                    <TableCell className="px-4 py-3 text-muted-foreground">{app.submittedAt}</TableCell>
+                    <TableCell className="px-4 py-3 text-muted-foreground">
+                      {app.submittedAt || (app.applicationStatus === 'DRAFT' ? 'Pending upload' : '—')}
+                    </TableCell>
                     <TableCell className="px-4 py-3">
                       <TransactionStatusPill status={app.applicationStatus} />
                     </TableCell>
                     <TableCell className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                      <Button size="sm" onClick={() => navigate(`/citizen/applications/${app.id}`)}>
-                        View Detail
-                        <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                      </Button>
+                      {app.applicationStatus === 'DRAFT' ? (
+                        <Button
+                          size="sm"
+                          className="gap-1.5 font-bold min-h-[36px]"
+                          onClick={() => navigate(`/citizen/applications/${app.id}#documents`)}
+                        >
+                          <UploadCloud className="h-3.5 w-3.5" />
+                          Upload documents
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1 min-h-[36px]"
+                          onClick={() => navigate(`/citizen/applications/${app.id}`)}
+                        >
+                          View Details
+                          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

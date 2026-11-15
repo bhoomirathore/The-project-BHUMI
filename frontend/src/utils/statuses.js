@@ -70,7 +70,7 @@ export const STATUS_PILL_STYLES = {
 export function getApplicationStatusMeta(status) {
   switch (status) {
     case APPLICATION_STATUSES.DRAFT:
-      return { label: 'Draft', variant: 'neutral' };
+      return { label: 'Documents pending', variant: 'warning' };
     case APPLICATION_STATUSES.SUBMITTED:
       return { label: 'Submitted', variant: 'info' };
     case APPLICATION_STATUSES.UNDER_VERIFICATION:
