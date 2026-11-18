@@ -41,22 +41,23 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 
+// Sample data — Madhya Pradesh districts and khasra numbers only. Not official government figures.
 const INITIAL_DISPUTES = [
   {
     id: 'DISP-2024-0891',
     khasra: '104/A',
-    district: 'Lucknow',
+    district: 'Bhopal',
     complainant: 'Harish Chandra',
     respondent: 'Devendra Nath',
     category: 'Boundary Overlap',
     filedDate: '02-Jan-2024',
     status: 'Active',
-    summary: 'Alleged encroachment of 300 sq.ft residential plot boundary after road expansion.',
+    summary: 'Alleged encroachment of 300 sq.ft residential plot boundary after road expansion in Huzur tehsil.',
   },
   {
     id: 'DISP-2024-0742',
     khasra: '512/3',
-    district: 'Agra',
+    district: 'Gwalior',
     complainant: 'Sunita Mehra',
     respondent: 'Ratan Lal',
     category: 'Ownership Title Contest',
@@ -67,24 +68,24 @@ const INITIAL_DISPUTES = [
   {
     id: 'DISP-2023-9981',
     khasra: '78/B',
-    district: 'Kanpur',
+    district: 'Jabalpur',
     complainant: 'Ajay K. Saxena',
     respondent: 'State Highway Authority',
     category: 'Compensation Dispute',
     filedDate: '28-Nov-2023',
     status: 'Resolved',
-    summary: 'Discrepancy in circle rate evaluation for acquired agricultural corridor land.',
+    summary: 'Discrepancy in circle rate evaluation for acquired agricultural corridor land in Panagar tehsil.',
   },
   {
     id: 'DISP-2024-0105',
     khasra: '221/1',
-    district: 'Prayagraj',
+    district: 'Indore',
     complainant: 'Balram Yadav',
     respondent: 'Vikramaditya Rao',
     category: 'Mutation Objection',
     filedDate: '18-Jan-2024',
     status: 'Active',
-    summary: 'Objection filed against digital mutation claiming forged unregistered sale deed.',
+    summary: 'Objection filed against digital mutation claiming forged unregistered sale deed in Depalpur tehsil.',
   },
 ];
 
@@ -172,7 +173,12 @@ export default function GovernmentDisputes() {
       <PageHeader
         eyebrow="Government HQ"
         title="Dispute Management"
-        description="Monitor, escalate & resolve land disputes nationwide"
+        description={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            Monitor, escalate &amp; resolve land disputes across Madhya Pradesh
+            <Badge variant="warning" className="px-2 py-0.5 text-[0.68rem]">Sample data</Badge>
+          </span>
+        }
         actions={
           <Button onClick={handleExport}>
             <Download aria-hidden="true" />
@@ -205,7 +211,7 @@ export default function GovernmentDisputes() {
           value="42 Days"
           icon={Clock}
           tone="info"
-          hint={<span className="font-medium text-success-foreground">Fastest in South Zone</span>}
+          hint={<span className="font-medium text-success-foreground">Fastest in Indore Division</span>}
           delay={0.15}
         />
       </section>
@@ -347,7 +353,7 @@ export default function GovernmentDisputes() {
                 disabled={activeCase.status === 'Resolved'}
               >
                 <CheckCircle2 aria-hidden="true" />
-                Resolve & Close Case
+                Resolve &amp; Close Case
               </Button>
             </div>
           )

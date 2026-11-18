@@ -31,33 +31,37 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
+// Sample data — Madhya Pradesh tehsils only. Not official government figures.
 const TEHSIL_DATA = [
-  { name: 'Agra Sadar', district: 'Agra', registries: 8420, mutations: 3210, pending: 284, coverage: 97, status: 'active' },
-  { name: 'Fatehabad', district: 'Agra', registries: 4180, mutations: 1640, pending: 512, coverage: 88, status: 'pending' },
-  { name: 'Etmadpur', district: 'Agra', registries: 2930, mutations: 980, pending: 120, coverage: 94, status: 'active' },
-  { name: 'Lucknow Sadar', district: 'Lucknow', registries: 9840, mutations: 4120, pending: 340, coverage: 98, status: 'active' },
-  { name: 'Bakshi Ka Talab', district: 'Lucknow', registries: 5210, mutations: 2180, pending: 189, coverage: 95, status: 'active' },
-  { name: 'Mohanlalganj', district: 'Lucknow', registries: 3760, mutations: 1490, pending: 421, coverage: 87, status: 'pending' },
-  { name: 'Varanasi Sadar', district: 'Varanasi', registries: 7840, mutations: 3280, pending: 218, coverage: 96, status: 'active' },
-  { name: 'Pindra', district: 'Varanasi', registries: 3120, mutations: 1140, pending: 380, coverage: 82, status: 'pending' },
-  { name: 'Arajiline', district: 'Varanasi', registries: 2480, mutations: 890, pending: 640, coverage: 71, status: 'inactive' },
-  { name: 'Kanpur Sadar', district: 'Kanpur', registries: 8190, mutations: 3410, pending: 290, coverage: 97, status: 'active' },
-  { name: 'Bilhaur', district: 'Kanpur', registries: 3490, mutations: 1360, pending: 452, coverage: 85, status: 'pending' },
-  { name: 'Ghatampur', district: 'Kanpur', registries: 2860, mutations: 1020, pending: 320, coverage: 89, status: 'active' },
-  { name: 'Prayagraj Sadar', district: 'Prayagraj', registries: 9120, mutations: 3840, pending: 180, coverage: 98, status: 'active' },
-  { name: 'Phulpur', district: 'Prayagraj', registries: 4280, mutations: 1680, pending: 390, coverage: 90, status: 'active' },
-  { name: 'Handia', district: 'Prayagraj', registries: 2940, mutations: 1090, pending: 510, coverage: 83, status: 'pending' },
-  { name: 'Soraon', district: 'Prayagraj', registries: 1840, mutations: 620, pending: 720, coverage: 68, status: 'inactive' },
-  { name: 'Mathura Sadar', district: 'Mathura', registries: 6320, mutations: 2480, pending: 210, coverage: 96, status: 'active' },
-  { name: 'Chhata', district: 'Mathura', registries: 2890, mutations: 980, pending: 340, coverage: 88, status: 'pending' },
+  // Bhopal
+  { name: 'Huzur',    district: 'Bhopal',   registries: 8420, mutations: 3210, pending: 284, coverage: 97, status: 'active' },
+  { name: 'Berasia',  district: 'Bhopal',   registries: 4180, mutations: 1640, pending: 512, coverage: 88, status: 'pending' },
+  { name: 'Kolar',    district: 'Bhopal',   registries: 2930, mutations:  980, pending: 120, coverage: 94, status: 'active' },
+  // Indore
+  { name: 'Sanwer',   district: 'Indore',   registries: 9840, mutations: 4120, pending: 340, coverage: 98, status: 'active' },
+  { name: 'Depalpur', district: 'Indore',   registries: 5210, mutations: 2180, pending: 189, coverage: 95, status: 'active' },
+  { name: 'Mhow',     district: 'Indore',   registries: 3760, mutations: 1490, pending: 421, coverage: 87, status: 'pending' },
+  // Jabalpur
+  { name: 'Patan',    district: 'Jabalpur', registries: 7840, mutations: 3280, pending: 218, coverage: 96, status: 'active' },
+  { name: 'Sihora',   district: 'Jabalpur', registries: 3120, mutations: 1140, pending: 380, coverage: 82, status: 'pending' },
+  { name: 'Panagar',  district: 'Jabalpur', registries: 2480, mutations:  890, pending: 640, coverage: 71, status: 'inactive' },
+  // Gwalior
+  { name: 'Gwalior',  district: 'Gwalior',  registries: 8190, mutations: 3410, pending: 290, coverage: 97, status: 'active' },
+  { name: 'Dabra',    district: 'Gwalior',  registries: 3490, mutations: 1360, pending: 452, coverage: 85, status: 'pending' },
+  { name: 'Bhitarwar',district: 'Gwalior',  registries: 2860, mutations: 1020, pending: 320, coverage: 89, status: 'active' },
+  // Ujjain
+  { name: 'Ujjain',   district: 'Ujjain',   registries: 9120, mutations: 3840, pending: 180, coverage: 98, status: 'active' },
+  { name: 'Nagda',    district: 'Ujjain',   registries: 4280, mutations: 1680, pending: 390, coverage: 90, status: 'active' },
+  { name: 'Mahidpur', district: 'Ujjain',   registries: 2940, mutations: 1090, pending: 510, coverage: 83, status: 'pending' },
+  { name: 'Badnagar', district: 'Ujjain',   registries: 1840, mutations:  620, pending: 720, coverage: 68, status: 'inactive' },
 ];
 
-const DISTRICTS = ['Agra', 'Lucknow', 'Varanasi', 'Kanpur', 'Prayagraj', 'Mathura'];
+const DISTRICTS = ['Bhopal', 'Indore', 'Jabalpur', 'Gwalior', 'Ujjain'];
 
 const STATUS_META = {
-  active: { label: 'Active', badge: 'success', dot: 'bg-success', live: true },
-  pending: { label: 'Pending', badge: 'warning', dot: 'bg-warning', live: false },
-  inactive: { label: 'Inactive', badge: 'error', dot: 'bg-destructive', live: false },
+  active:   { label: 'Active',   badge: 'success', dot: 'bg-success',     live: true  },
+  pending:  { label: 'Pending',  badge: 'warning', dot: 'bg-warning',     live: false },
+  inactive: { label: 'Inactive', badge: 'error',   dot: 'bg-destructive', live: false },
 };
 
 const coverageTone = (c) => (c >= 90 ? '[&>div]:bg-success' : c >= 75 ? '[&>div]:bg-info' : '[&>div]:bg-warning');
@@ -140,9 +144,9 @@ export default function GovernmentMonitoring() {
 
   const counts = useMemo(
     () => ({
-      all: TEHSIL_DATA.length,
-      active: TEHSIL_DATA.filter((r) => r.status === 'active').length,
-      pending: TEHSIL_DATA.filter((r) => r.status === 'pending').length,
+      all:      TEHSIL_DATA.length,
+      active:   TEHSIL_DATA.filter((r) => r.status === 'active').length,
+      pending:  TEHSIL_DATA.filter((r) => r.status === 'pending').length,
       inactive: TEHSIL_DATA.filter((r) => r.status === 'inactive').length,
     }),
     []
@@ -155,7 +159,7 @@ export default function GovernmentMonitoring() {
   const refresh = useCallback(() => {
     if (refreshing) return;
     setRefreshing(true);
-    // Static dataset: simulate a node poll so the UI reflects a fresh sync timestamp.
+    // Static dataset — simulate a node poll so the UI reflects a fresh sync timestamp.
     window.setTimeout(() => {
       setLastSynced(new Date());
       setRefreshing(false);
@@ -168,15 +172,16 @@ export default function GovernmentMonitoring() {
       <PageHeader
         eyebrow="Government HQ"
         title="Registry Monitoring"
-        description="Real-time tehsil & block-wise tracking"
+        description={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            Sample tracking view — tehsil &amp; block-wise activity across Madhya Pradesh
+            <Badge variant="warning" className="px-2 py-0.5 text-[0.68rem]">Sample data</Badge>
+          </span>
+        }
         actions={
           <>
-            <Badge variant="success" className="h-9 px-3">
-              <span className="relative flex h-2 w-2" aria-hidden="true">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
-              </span>
-              LIVE
+            <Badge variant="outline" className="h-9 px-3 text-muted-foreground">
+              Sample data
             </Badge>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -197,7 +202,7 @@ export default function GovernmentMonitoring() {
       {/* KPI Strip */}
       <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4" aria-label="Network KPIs">
         <StatCard label="Active Tehsils" value="358 Nodes" icon={ServerCog} tone="success" hint="100% Online" delay={0} />
-        <StatCard label="Today's Registrations" value={1842} icon={Activity} tone="info" hint="Across state" delay={0.05} />
+        <StatCard label="Today's Registrations" value={1842} icon={Activity} tone="info" hint="Across Madhya Pradesh" delay={0.05} />
         <StatCard label="Blockchain Latency" value="1.2 sec" icon={Timer} hint="Consensus Finality" delay={0.1} />
         <StatCard label="Sync Status" value="Healthy" icon={Gauge} tone="success" hint="Block #10484" delay={0.15} />
       </section>

@@ -28,9 +28,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
+// Sample data — Madhya Pradesh divisions only. Not official government figures.
 const REGIONS = [
-  { region: 'Pune Region', mutations: 1420, area: '84,200 Hectares', areaHa: 84200, health: '100% Operational' },
-  { region: 'Mumbai Metropolitan', mutations: 3890, area: '42,100 Hectares', areaHa: 42100, health: '100% Operational' },
+  { region: 'Bhopal Division', mutations: 2140, area: '1,12,400 Hectares', areaHa: 112400, health: '100% Operational' },
+  { region: 'Indore Division', mutations: 3890, area: '98,600 Hectares', areaHa: 98600, health: '100% Operational' },
+  { region: 'Jabalpur Division', mutations: 1820, area: '1,38,200 Hectares', areaHa: 138200, health: '100% Operational' },
+  { region: 'Gwalior Division', mutations: 1540, area: '84,800 Hectares', areaHa: 84800, health: '100% Operational' },
+  { region: 'Ujjain Division', mutations: 1680, area: '76,400 Hectares', areaHa: 76400, health: '100% Operational' },
 ];
 
 function ChartTooltip({ active, payload, label }) {
@@ -64,15 +68,15 @@ export default function GovernmentDashboard() {
     <AppShell portal="government">
       <PageHeader
         eyebrow="Government HQ"
-        title="State Land Revenue & Governance HQ"
-        description="State Overview (prototype)"
+        title="Madhya Pradesh Land Records & Governance HQ"
+        description="Madhya Pradesh Overview (prototype · sample data)"
         actions={
           <div className="flex items-center gap-3 rounded-lg border bg-muted/40 px-3 py-2">
             <Avatar className="h-8 w-8">
               <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground">HQ</AvatarFallback>
             </Avatar>
             <div className="flex flex-col leading-tight">
-              <span className="text-xs font-bold text-foreground">Directorate of Land Records</span>
+              <span className="text-xs font-bold text-foreground">Directorate of Land Records, MP</span>
               <span className="text-[0.68rem] text-muted-foreground">State Administrator</span>
             </div>
           </div>
@@ -125,8 +129,8 @@ export default function GovernmentDashboard() {
 
       {/* Regional Stream */}
       <Section
-        title="Regional Land Transaction Stream"
-        description="Live mutation and registration activity across monitored regions"
+        title="Divisional Land Transaction Stream"
+        description="Sample mutation and registration activity across Madhya Pradesh divisions"
       >
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           <Reveal className="lg:col-span-2">
@@ -136,7 +140,7 @@ export default function GovernmentDashboard() {
                   <Table className="min-w-[640px]">
                     <TableHeader>
                       <TableRow className="bg-muted/40 hover:bg-muted/40">
-                        <TableHead className="px-4">Region / District</TableHead>
+                        <TableHead className="px-4">Division / District</TableHead>
                         <TableHead className="px-4">Active Mutations</TableHead>
                         <TableHead className="px-4">Total Registered Area</TableHead>
                         <TableHead className="px-4">Validator Health</TableHead>
@@ -189,8 +193,8 @@ export default function GovernmentDashboard() {
           <Reveal delay={0.1}>
             <Card className="h-full shadow-card">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">Active Mutations by Region</CardTitle>
-                <CardDescription>Mutations currently in progress</CardDescription>
+                <CardTitle className="text-base">Active Mutations by Division</CardTitle>
+                <CardDescription>Sample mutations currently in progress</CardDescription>
               </CardHeader>
               <CardContent className="h-[240px] pt-2">
                 <ResponsiveContainer width="100%" height="100%">

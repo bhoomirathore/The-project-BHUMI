@@ -78,12 +78,13 @@ export default function GovernmentAnalytics() {
     { type: 'Lease / Other', count: '6,202', pct: 5, color: 'hsl(var(--destructive))' },
   ];
 
+  // Sample data — Madhya Pradesh districts only. Not official government figures.
   const districtRankings = [
-    { rank: 1, district: 'Lucknow', deeds: '24,890', revenue: '₹ 142 Cr', compliance: '98%' },
-    { rank: 2, district: 'Prayagraj', deeds: '21,340', revenue: '₹ 118 Cr', compliance: '97%' },
-    { rank: 3, district: 'Kanpur', deeds: '19,820', revenue: '₹ 105 Cr', compliance: '96%' },
-    { rank: 4, district: 'Agra', deeds: '16,740', revenue: '₹ 89 Cr', compliance: '95%' },
-    { rank: 5, district: 'Varanasi', deeds: '14,210', revenue: '₹ 78 Cr', compliance: '94%' },
+    { rank: 1, district: 'Bhopal', deeds: '24,890', revenue: '₹ 142 Cr', compliance: '98%' },
+    { rank: 2, district: 'Indore', deeds: '21,340', revenue: '₹ 118 Cr', compliance: '97%' },
+    { rank: 3, district: 'Jabalpur', deeds: '19,820', revenue: '₹ 105 Cr', compliance: '96%' },
+    { rank: 4, district: 'Gwalior', deeds: '16,740', revenue: '₹ 89 Cr', compliance: '95%' },
+    { rank: 5, district: 'Ujjain', deeds: '14,210', revenue: '₹ 78 Cr', compliance: '94%' },
   ];
 
   const deedChart = useMemo(
@@ -112,7 +113,12 @@ export default function GovernmentAnalytics() {
       <PageHeader
         eyebrow="Government HQ"
         title="Analytics"
-        description="Deep insights across districts, deed types & timelines"
+        description={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            Deep insights across Madhya Pradesh districts, deed types &amp; timelines
+            <Badge variant="warning" className="px-2 py-0.5 text-[0.68rem]">Sample data</Badge>
+          </span>
+        }
         actions={
           <>
             <div className="flex items-center gap-2">
@@ -253,7 +259,7 @@ export default function GovernmentAnalytics() {
             <Reveal delay={0.1}>
               <Card className="h-full shadow-card">
                 <CardHeader>
-                  <CardTitle className="text-base">Top Performing Districts</CardTitle>
+                  <CardTitle className="text-base">Top Performing Districts — Madhya Pradesh</CardTitle>
                   <CardDescription>Ranked by deeds registered in {selectedYear}</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0 pb-2">
@@ -299,8 +305,8 @@ export default function GovernmentAnalytics() {
             <Reveal className="lg:col-span-2">
               <Card className="h-full shadow-card">
                 <CardHeader>
-                  <CardTitle className="text-base">Deeds Registered by District ({selectedYear})</CardTitle>
-                  <CardDescription>Top five districts by volume</CardDescription>
+                  <CardTitle className="text-base">Deeds Registered by District — MP ({selectedYear})</CardTitle>
+                  <CardDescription>Top five Madhya Pradesh districts by volume</CardDescription>
                 </CardHeader>
                 <CardContent className="h-[280px]">
                   <ResponsiveContainer width="100%" height="100%">
@@ -383,7 +389,7 @@ export default function GovernmentAnalytics() {
               <Card className="h-full shadow-card">
                 <CardHeader>
                   <CardTitle className="text-base">Revenue Leaderboard</CardTitle>
-                  <CardDescription>Stamp revenue collected per district</CardDescription>
+                  <CardDescription>Stamp revenue collected per MP district</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-4">
                   {districtChart.map((row) => {
