@@ -3,12 +3,18 @@ import { motion } from 'framer-motion';
 import Sidebar, { SIDEBAR_WIDTH, SIDEBAR_COLLAPSED_WIDTH } from '@/components/Sidebar';
 import CommandPalette from './CommandPalette';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { portalForRole } from '@/config/navigation';
 
 /**
  * Portal page scaffold: fixed sidebar + scrollable main content + Ctrl+K palette.
- * <AppShell portal="citizen"> ...page content... </AppShell>
+ * The sidebar and palette are always driven by the logged-in user's role.
+ * The optional `portal` prop is kept for backward compat but ignored if a user is logged in.
  */
-export default function AppShell({ portal = 'citizen', children, className, contentClassName }) {
+export default function AppShell({ portal: portalProp = 'citizen', children, className, contentClassName }) {
+  const { user } = useAuth();
+  // Derive the portal key from the authenticated role; fall back to the prop.
+  const portal = user?.role ? portalForRole(user.role) : portalProp;
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem('bhumi-sidebar-collapsed') === '1'; } catch { return false; }

@@ -40,53 +40,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-
-const INITIAL_DISPUTES = [
-  {
-    id: 'DISP-2024-0891',
-    khasra: '104/A',
-    district: 'Lucknow',
-    complainant: 'Harish Chandra',
-    respondent: 'Devendra Nath',
-    category: 'Boundary Overlap',
-    filedDate: '02-Jan-2024',
-    status: 'Active',
-    summary: 'Alleged encroachment of 300 sq.ft residential plot boundary after road expansion.',
-  },
-  {
-    id: 'DISP-2024-0742',
-    khasra: '512/3',
-    district: 'Agra',
-    complainant: 'Sunita Mehra',
-    respondent: 'Ratan Lal',
-    category: 'Ownership Title Contest',
-    filedDate: '14-Dec-2023',
-    status: 'Under Review',
-    summary: 'Conflicting historical inheritance claims registered in two separate sub-tehsil books.',
-  },
-  {
-    id: 'DISP-2023-9981',
-    khasra: '78/B',
-    district: 'Kanpur',
-    complainant: 'Ajay K. Saxena',
-    respondent: 'State Highway Authority',
-    category: 'Compensation Dispute',
-    filedDate: '28-Nov-2023',
-    status: 'Resolved',
-    summary: 'Discrepancy in circle rate evaluation for acquired agricultural corridor land.',
-  },
-  {
-    id: 'DISP-2024-0105',
-    khasra: '221/1',
-    district: 'Prayagraj',
-    complainant: 'Balram Yadav',
-    respondent: 'Vikramaditya Rao',
-    category: 'Mutation Objection',
-    filedDate: '18-Jan-2024',
-    status: 'Active',
-    summary: 'Objection filed against digital mutation claiming forged unregistered sale deed.',
-  },
-];
+import { DISPUTES as INITIAL_DISPUTES, DISPUTE_STATS } from '@/data/hqSampleData';
 
 const STATUS_TABS = ['All', 'Active', 'Under Review', 'Resolved'];
 
@@ -172,7 +126,12 @@ export default function GovernmentDisputes() {
       <PageHeader
         eyebrow="Government HQ"
         title="Dispute Management"
-        description="Monitor, escalate & resolve land disputes nationwide"
+        description={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            Monitor, escalate &amp; resolve land disputes across Madhya Pradesh
+            <Badge variant="warning" className="px-2 py-0.5 text-[0.68rem]">Sample data</Badge>
+          </span>
+        }
         actions={
           <Button onClick={handleExport}>
             <Download aria-hidden="true" />
@@ -183,10 +142,10 @@ export default function GovernmentDisputes() {
 
       {/* Dispute KPIs */}
       <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4" aria-label="Dispute KPIs">
-        <StatCard label="Total Disputes" value={4218} icon={Gavel} hint="FY 2024–25" delay={0} />
+        <StatCard label="Total Disputes" value={DISPUTE_STATS.total} icon={Gavel} hint="FY 2026" delay={0} />
         <StatCard
           label="Active / Open"
-          value={1204}
+          value={DISPUTE_STATS.active}
           icon={FileWarning}
           tone="error"
           hint={<span className="font-medium text-warning-foreground">Requires monitoring</span>}
@@ -194,18 +153,18 @@ export default function GovernmentDisputes() {
         />
         <StatCard
           label="Resolved"
-          value={2791}
+          value={DISPUTE_STATS.resolvedCount}
           icon={CheckCircle2}
           tone="success"
-          hint={<span className="font-medium text-success-foreground">66.2% resolution rate</span>}
+          hint={<span className="font-medium text-success-foreground">{DISPUTE_STATS.resolutionRate}% resolution rate</span>}
           delay={0.1}
         />
         <StatCard
           label="Avg Resolution Time"
-          value="42 Days"
+          value={`${DISPUTE_STATS.avgDays} Days`}
           icon={Clock}
           tone="info"
-          hint={<span className="font-medium text-success-foreground">Fastest in South Zone</span>}
+          hint={<span className="font-medium text-success-foreground">Fastest in Indore Division</span>}
           delay={0.15}
         />
       </section>
@@ -347,7 +306,7 @@ export default function GovernmentDisputes() {
                 disabled={activeCase.status === 'Resolved'}
               >
                 <CheckCircle2 aria-hidden="true" />
-                Resolve & Close Case
+                Resolve &amp; Close Case
               </Button>
             </div>
           )

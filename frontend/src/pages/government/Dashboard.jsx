@@ -27,11 +27,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-
-const REGIONS = [
-  { region: 'Pune Region', mutations: 1420, area: '84,200 Hectares', areaHa: 84200, health: '100% Operational' },
-  { region: 'Mumbai Metropolitan', mutations: 3890, area: '42,100 Hectares', areaHa: 42100, health: '100% Operational' },
-];
+import {
+  DIVISION_STREAM,
+  BLOCKCHAIN_BLOCKS,
+  HASH_VERIFIED_PCT,
+  PROPERTIES_ON_PLATFORM,
+  TEHSIL_COUNTS,
+  TOTAL_REVENUE_RS,
+  fmt,
+  fmtCr,
+} from '@/data/hqSampleData';
 
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -64,15 +69,15 @@ export default function GovernmentDashboard() {
     <AppShell portal="government">
       <PageHeader
         eyebrow="Government HQ"
-        title="State Land Revenue & Governance HQ"
-        description="State Overview (prototype)"
+        title="Madhya Pradesh Land Records & Governance HQ"
+        description="Madhya Pradesh Overview (prototype · sample data)"
         actions={
           <div className="flex items-center gap-3 rounded-lg border bg-muted/40 px-3 py-2">
             <Avatar className="h-8 w-8">
               <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground">HQ</AvatarFallback>
             </Avatar>
             <div className="flex flex-col leading-tight">
-              <span className="text-xs font-bold text-foreground">Directorate of Land Records</span>
+              <span className="text-xs font-bold text-foreground">Directorate of Land Records, MP</span>
               <span className="text-[0.68rem] text-muted-foreground">State Administrator</span>
             </div>
           </div>
@@ -82,24 +87,24 @@ export default function GovernmentDashboard() {
       {/* HQ Metrics Grid */}
       <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4" aria-label="HQ metrics">
         <StatCard
-          label="Total Land Digitized"
-          value="1.42 M"
+          label="Properties on Platform"
+          value={fmt(PROPERTIES_ON_PLATFORM)}
           icon={Landmark}
           tone="success"
-          hint={<Trend>+12.4% vs last quarter</Trend>}
+          hint={<Trend>+3.2% vs last month</Trend>}
           delay={0}
         />
         <StatCard
           label="Blockchain Blocks"
-          value={10484}
+          value={BLOCKCHAIN_BLOCKS}
           icon={Blocks}
           tone="info"
-          hint={<Trend>100% Immutable</Trend>}
+          hint={<Trend>Hash-verified {HASH_VERIFIED_PCT}%</Trend>}
           delay={0.05}
         />
         <StatCard
           label="Tehsils Online"
-          value="358 / 358"
+          value={`${TEHSIL_COUNTS.active} / ${TEHSIL_COUNTS.all}`}
           icon={Radio}
           tone="success"
           hint={
@@ -108,25 +113,25 @@ export default function GovernmentDashboard() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
               </span>
-              Fully Connected
+              {TEHSIL_COUNTS.active} of {TEHSIL_COUNTS.all} Connected
             </span>
           }
           delay={0.1}
         />
         <StatCard
           label="Stamp Duty Revenue"
-          value="₹ 4,820 Cr"
+          value={fmtCr(TOTAL_REVENUE_RS)}
           icon={IndianRupee}
           tone="warning"
-          hint={<Trend>+8.1% target met</Trend>}
+          hint={<Trend>+2.8% vs last month</Trend>}
           delay={0.15}
         />
       </section>
 
       {/* Regional Stream */}
       <Section
-        title="Regional Land Transaction Stream"
-        description="Live mutation and registration activity across monitored regions"
+        title="District Land Transaction Stream"
+        description="Sample pending application activity across Madhya Pradesh pilot districts"
       >
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           <Reveal className="lg:col-span-2">
@@ -136,19 +141,19 @@ export default function GovernmentDashboard() {
                   <Table className="min-w-[640px]">
                     <TableHeader>
                       <TableRow className="bg-muted/40 hover:bg-muted/40">
-                        <TableHead className="px-4">Region / District</TableHead>
-                        <TableHead className="px-4">Active Mutations</TableHead>
+                        <TableHead className="px-4">District</TableHead>
+                        <TableHead className="px-4">Pending Applications</TableHead>
                         <TableHead className="px-4">Total Registered Area</TableHead>
-                        <TableHead className="px-4">Validator Health</TableHead>
+                        <TableHead className="px-4">Sync Health</TableHead>
                         <TableHead className="px-4 text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {REGIONS.map((row) => (
+                      {DIVISION_STREAM.map((row) => (
                         <TableRow
-                          key={row.region}
+                          key={row.slug}
                           className="cursor-pointer hover:bg-muted/40"
-                          onClick={() => navigate('/government/analytics')}
+                          onClick={() => navigate(`/government/analytics?district=${row.slug}`)}
                         >
                           <TableCell className="px-4 py-4 font-bold">
                             <span className="inline-flex items-center gap-2">
@@ -156,12 +161,12 @@ export default function GovernmentDashboard() {
                               {row.region}
                             </span>
                           </TableCell>
-                          <TableCell className="px-4 py-4 font-mono">{row.mutations.toLocaleString('en-IN')}</TableCell>
-                          <TableCell className="px-4 py-4 font-mono">{row.area}</TableCell>
+                          <TableCell className="px-4 py-4 font-mono">{row.pendingApps.toLocaleString('en-IN')}</TableCell>
+                          <TableCell className="px-4 py-4 font-mono">{row.areaStr}</TableCell>
                           <TableCell className="px-4 py-4">
-                            <Badge variant="success">
-                              <span className="h-1.5 w-1.5 rounded-full bg-success" aria-hidden="true" />
-                              {row.health}
+                            <Badge variant={row.allActive ? 'success' : 'warning'}>
+                              <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+                              {row.syncHealth}
                             </Badge>
                           </TableCell>
                           <TableCell className="px-4 py-4 text-right">
@@ -170,7 +175,7 @@ export default function GovernmentDashboard() {
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate('/government/analytics');
+                                navigate(`/government/analytics?district=${row.slug}`);
                               }}
                             >
                               View Analytics
@@ -189,12 +194,12 @@ export default function GovernmentDashboard() {
           <Reveal delay={0.1}>
             <Card className="h-full shadow-card">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">Active Mutations by Region</CardTitle>
-                <CardDescription>Mutations currently in progress</CardDescription>
+                <CardTitle className="text-base">Pending Applications by District</CardTitle>
+                <CardDescription>Sample application backlog per district</CardDescription>
               </CardHeader>
               <CardContent className="h-[240px] pt-2">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={REGIONS} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                  <BarChart data={DIVISION_STREAM} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
                     <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 3" />
                     <XAxis
                       dataKey="region"
@@ -210,8 +215,8 @@ export default function GovernmentDashboard() {
                     />
                     <Tooltip content={<ChartTooltip />} cursor={{ fill: 'hsl(var(--muted) / 0.5)' }} />
                     <Bar
-                      dataKey="mutations"
-                      name="Active Mutations"
+                      dataKey="pendingApps"
+                      name="Pending Applications"
                       fill="hsl(var(--primary))"
                       radius={[6, 6, 0, 0]}
                       maxBarSize={56}

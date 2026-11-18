@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Award,
@@ -44,7 +45,21 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-const toNumber = (s) => Number(String(s).replace(/[^0-9.]/g, ''));
+import {
+  DEED_TYPES,
+  DISTRICT_RANKINGS,
+  TOTAL_REVENUE_RS,
+  AVG_MUTATION_DAYS,
+  HASH_VERIFIED_PCT,
+  NODE_UPTIME_PCT,
+  TOTAL_COMPLETED_DEEDS,
+  DISTRICT_ANALYTICS_MAP,
+  VALID_DISTRICT_SLUGS,
+  PILOT_DISTRICTS_META,
+  STATE_KPIS,
+  fmt,
+  fmtCr,
+} from '@/data/hqSampleData';
 
 function ChartTooltip({ active, payload, label, formatter }) {
   if (!active || !payload?.length) return null;
@@ -68,43 +83,68 @@ const AXIS_TICK = { fill: 'hsl(var(--muted-foreground))', fontSize: 11 };
 const AXIS_LINE = { stroke: 'hsl(var(--border))' };
 
 export default function GovernmentAnalytics() {
-  const [selectedYear, setSelectedYear] = useState('2024');
+  const [selectedYear, setSelectedYear] = useState('2026');
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const deedTypes = [
-    { type: 'Sale Deed', count: '84,210', pct: 56, color: 'hsl(var(--primary))' },
-    { type: 'Gift Deed', count: '28,140', pct: 19, color: 'hsl(var(--success))' },
-    { type: 'Mortgage Deed', count: '18,320', pct: 12, color: 'hsl(var(--warning))' },
-    { type: 'Partition Deed', count: '11,430', pct: 8, color: 'hsl(var(--info))' },
-    { type: 'Lease / Other', count: '6,202', pct: 5, color: 'hsl(var(--destructive))' },
-  ];
+  // District routing & URL query state (?district=bhopal)
+  const districtParam = searchParams.get('district')?.toLowerCase();
+  const isDistrictSelected = Boolean(districtParam && VALID_DISTRICT_SLUGS.includes(districtParam));
+  const selectedDistrict = isDistrictSelected ? districtParam : 'all';
+  const activeDistrict = isDistrictSelected ? DISTRICT_ANALYTICS_MAP[selectedDistrict] : null;
 
-  const districtRankings = [
-    { rank: 1, district: 'Lucknow', deeds: '24,890', revenue: '₹ 142 Cr', compliance: '98%' },
-    { rank: 2, district: 'Prayagraj', deeds: '21,340', revenue: '₹ 118 Cr', compliance: '97%' },
-    { rank: 3, district: 'Kanpur', deeds: '19,820', revenue: '₹ 105 Cr', compliance: '96%' },
-    { rank: 4, district: 'Agra', deeds: '16,740', revenue: '₹ 89 Cr', compliance: '95%' },
-    { rank: 5, district: 'Varanasi', deeds: '14,210', revenue: '₹ 78 Cr', compliance: '94%' },
-  ];
+  const handleDistrictChange = (value) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (value === 'all') {
+      newParams.delete('district');
+    } else {
+      newParams.set('district', value);
+    }
+    setSearchParams(newParams);
+  };
+
+  // Recomputed KPIs for selection (District or Statewide)
+  const currentKpis = activeDistrict || STATE_KPIS;
+  const currentDeedsTotal = currentKpis.deeds;
+  const currentDeedTypes = activeDistrict ? activeDistrict.deedTypes : DEED_TYPES;
 
   const deedChart = useMemo(
-    () => deedTypes.map((d) => ({ ...d, value: toNumber(d.count) })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    () => currentDeedTypes.map((d) => ({ ...d, value: d.count })),
+    [currentDeedTypes]
   );
+
   const districtChart = useMemo(
     () =>
-      districtRankings.map((d) => ({
+      DISTRICT_RANKINGS.map((d) => ({
         ...d,
-        deedsNum: toNumber(d.deeds),
-        revenueNum: toNumber(d.revenue),
-        complianceNum: toNumber(d.compliance),
+        name: d.district,
+        deedsNum: d.deeds,
+        complianceNum: d.compliance,
+        revenueNum: d.revenueCr,
       })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 
+  const tehsilChart = useMemo(
+    () =>
+      activeDistrict
+        ? activeDistrict.tehsils.map((t) => ({
+            ...t,
+            deedsNum: t.deeds,
+            complianceNum: t.compliance,
+            revenueNum: t.revenueCr,
+          }))
+        : [],
+    [activeDistrict]
+  );
+
+  // Active chart data depending on selection
+  const regionalData = isDistrictSelected ? tehsilChart : districtChart;
+  const xAxisKey = isDistrictSelected ? 'name' : 'district';
+  const leaderboardData = isDistrictSelected ? tehsilChart : districtChart;
+  const maxLeaderboardRevenue = leaderboardData[0]?.revenueNum || 1;
+
   const handleExport = () => {
-    toast.info(`Exporting Revenue & Deed Analytics Report for ${selectedYear} (PDF/CSV)...`);
+    toast.info(`Exporting Revenue & Deed Analytics Report for ${currentKpis.name} (${selectedYear})...`);
   };
 
   return (
@@ -112,21 +152,44 @@ export default function GovernmentAnalytics() {
       <PageHeader
         eyebrow="Government HQ"
         title="Analytics"
-        description="Deep insights across districts, deed types & timelines"
+        description={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            {isDistrictSelected
+              ? `Deep insights for ${activeDistrict.name}, deed types & timelines`
+              : 'Deep insights across Madhya Pradesh districts, deed types & timelines'}
+            <Badge variant="warning" className="px-2 py-0.5 text-[0.68rem]">Sample data</Badge>
+          </span>
+        }
         actions={
           <>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="analytics-district" className="sr-only">
+                District
+              </Label>
+              <Select value={selectedDistrict} onValueChange={handleDistrictChange}>
+                <SelectTrigger id="analytics-district" className="w-[170px]" aria-label="Select district">
+                  <SelectValue placeholder="All Madhya Pradesh" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Madhya Pradesh</SelectItem>
+                  {PILOT_DISTRICTS_META.map((d) => (
+                    <SelectItem key={d.slug} value={d.slug}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex items-center gap-2">
               <Label htmlFor="analytics-year" className="sr-only">
                 Year
               </Label>
               <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger id="analytics-year" className="w-[110px]" aria-label="Select year">
+                <SelectTrigger id="analytics-year" className="w-[100px]" aria-label="Select year">
                   <SelectValue placeholder="Year" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="2024">2024</SelectItem>
-                  <SelectItem value="2023">2023</SelectItem>
-                  <SelectItem value="2022">2022</SelectItem>
+                  <SelectItem value="2026">2026</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -142,45 +205,45 @@ export default function GovernmentAnalytics() {
       <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4" aria-label="Summary">
         <StatCard
           label="Total Deeds"
-          value="1,48,302"
+          value={fmt(currentKpis.deeds)}
           icon={FileText}
           hint={
             <span className="inline-flex items-center gap-1 font-medium text-success-foreground">
-              <TrendingUp className="h-3 w-3" aria-hidden="true" /> 12.4% YoY
+              <TrendingUp className="h-3 w-3" aria-hidden="true" /> +3.2% vs last month
             </span>
           }
           delay={0}
         />
         <StatCard
           label="Stamp Revenue"
-          value="₹842Cr"
+          value={fmtCr(currentKpis.revenueRaw)}
           icon={IndianRupee}
           tone="warning"
           hint={
             <span className="inline-flex items-center gap-1 font-medium text-success-foreground">
-              <TrendingUp className="h-3 w-3" aria-hidden="true" /> 9.1% YoY
+              <TrendingUp className="h-3 w-3" aria-hidden="true" /> +2.1% vs last month
             </span>
           }
           delay={0.05}
         />
         <StatCard
           label="Avg Mutation Time"
-          value="3.2 Days"
+          value={`${currentKpis.avgMutationDays} Days`}
           icon={Clock}
           tone="info"
           hint={
             <span className="inline-flex items-center gap-1 font-medium text-success-foreground">
-              <TrendingDown className="h-3 w-3" aria-hidden="true" /> 1.8d vs 2023
+              <TrendingDown className="h-3 w-3" aria-hidden="true" /> 0.9d faster vs last month
             </span>
           }
           delay={0.1}
         />
         <StatCard
           label="Blockchain Verification"
-          value="100%"
+          value={`${currentKpis.verificationPct}%`}
           icon={ShieldCheck}
           tone="success"
-          hint="Node uptime 99.98%"
+          hint={`${currentKpis.nodeUptimePct || NODE_UPTIME_PCT}% node uptime`}
           delay={0.15}
         />
       </section>
@@ -201,7 +264,11 @@ export default function GovernmentAnalytics() {
               <Card className="h-full shadow-card">
                 <CardHeader>
                   <CardTitle className="text-base">Deed Classification Breakdown ({selectedYear})</CardTitle>
-                  <CardDescription>Share of registered deeds by instrument type</CardDescription>
+                  <CardDescription>
+                    {isDistrictSelected
+                      ? `Share of registered deeds by instrument type in ${activeDistrict.name}`
+                      : 'Share of registered deeds by instrument type across Madhya Pradesh'}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[240px]">
@@ -226,25 +293,28 @@ export default function GovernmentAnalytics() {
                     </ResponsiveContainer>
                   </div>
                   <ul className="mt-2 flex flex-col gap-3" aria-label="Deed type distribution">
-                    {deedTypes.map((item) => (
-                      <li key={item.type} className="flex flex-col gap-1.5">
-                        <div className="flex justify-between text-xs">
-                          <span className="inline-flex items-center gap-2 font-semibold text-foreground">
-                            <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: item.color }} aria-hidden="true" />
-                            {item.type}
-                          </span>
-                          <span className="font-mono text-muted-foreground">
-                            {item.count} ({item.pct}%)
-                          </span>
-                        </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{ width: `${item.pct}%`, backgroundColor: item.color }}
-                          />
-                        </div>
-                      </li>
-                    ))}
+                    {currentDeedTypes.map((item) => {
+                      const pct = currentDeedsTotal > 0 ? parseFloat(((item.count / currentDeedsTotal) * 100).toFixed(1)) : 0;
+                      return (
+                        <li key={item.type} className="flex flex-col gap-1.5">
+                          <div className="flex justify-between text-xs">
+                            <span className="inline-flex items-center gap-2 font-semibold text-foreground">
+                              <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: item.color }} aria-hidden="true" />
+                              {item.type}
+                            </span>
+                            <span className="font-mono text-muted-foreground">
+                              {fmt(item.count)} ({pct}%)
+                            </span>
+                          </div>
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{ width: `${pct}%`, backgroundColor: item.color }}
+                            />
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </CardContent>
               </Card>
@@ -253,7 +323,9 @@ export default function GovernmentAnalytics() {
             <Reveal delay={0.1}>
               <Card className="h-full shadow-card">
                 <CardHeader>
-                  <CardTitle className="text-base">Top Performing Districts</CardTitle>
+                  <CardTitle className="text-base">
+                    {isDistrictSelected ? `Tehsils in ${activeDistrict.name}` : 'Top Performing Districts — Madhya Pradesh'}
+                  </CardTitle>
                   <CardDescription>Ranked by deeds registered in {selectedYear}</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0 pb-2">
@@ -262,28 +334,44 @@ export default function GovernmentAnalytics() {
                       <TableHeader>
                         <TableRow className="hover:bg-transparent">
                           <TableHead className="px-4">Rank</TableHead>
-                          <TableHead>District</TableHead>
+                          <TableHead>{isDistrictSelected ? 'Tehsil' : 'District'}</TableHead>
                           <TableHead>Deeds</TableHead>
                           <TableHead>Revenue</TableHead>
                           <TableHead className="pr-4">Compliance</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {districtRankings.map((row) => (
-                          <TableRow key={row.rank} className="hover:bg-muted/40">
-                            <TableCell className="px-4 py-3 font-bold">
-                              <span className="inline-flex items-center gap-1.5">
-                                {row.rank === 1 && <Award className="h-3.5 w-3.5 text-warning-foreground" aria-hidden="true" />}#{row.rank}
-                              </span>
-                            </TableCell>
-                            <TableCell className="py-3 font-semibold">{row.district}</TableCell>
-                            <TableCell className="py-3 font-mono">{row.deeds}</TableCell>
-                            <TableCell className="py-3 font-mono">{row.revenue}</TableCell>
-                            <TableCell className="py-3 pr-4">
-                              <Badge variant="success">{row.compliance}</Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {isDistrictSelected
+                          ? activeDistrict.tehsils.map((row) => (
+                              <TableRow key={row.name} className="hover:bg-muted/40">
+                                <TableCell className="px-4 py-3 font-bold">
+                                  <span className="inline-flex items-center gap-1.5">
+                                    {row.rank === 1 && <Award className="h-3.5 w-3.5 text-warning-foreground" aria-hidden="true" />}#{row.rank}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="py-3 font-semibold">{row.name}</TableCell>
+                                <TableCell className="py-3 font-mono">{fmt(row.deeds)}</TableCell>
+                                <TableCell className="py-3 font-mono">{fmtCr(row.revenueRaw)}</TableCell>
+                                <TableCell className="py-3 pr-4">
+                                  <Badge variant="success">{row.complianceStr}</Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          : DISTRICT_RANKINGS.map((row) => (
+                              <TableRow key={row.rank} className="hover:bg-muted/40">
+                                <TableCell className="px-4 py-3 font-bold">
+                                  <span className="inline-flex items-center gap-1.5">
+                                    {row.rank === 1 && <Award className="h-3.5 w-3.5 text-warning-foreground" aria-hidden="true" />}#{row.rank}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="py-3 font-semibold">{row.district}</TableCell>
+                                <TableCell className="py-3 font-mono">{fmt(row.deeds)}</TableCell>
+                                <TableCell className="py-3 font-mono">{fmtCr(row.revenueRaw)}</TableCell>
+                                <TableCell className="py-3 pr-4">
+                                  <Badge variant="success">{row.complianceStr}</Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
                       </TableBody>
                     </Table>
                   </div>
@@ -299,14 +387,22 @@ export default function GovernmentAnalytics() {
             <Reveal className="lg:col-span-2">
               <Card className="h-full shadow-card">
                 <CardHeader>
-                  <CardTitle className="text-base">Deeds Registered by District ({selectedYear})</CardTitle>
-                  <CardDescription>Top five districts by volume</CardDescription>
+                  <CardTitle className="text-base">
+                    {isDistrictSelected
+                      ? `Deeds Registered by Tehsil — ${activeDistrict.name} (${selectedYear})`
+                      : `Deeds Registered by District — MP (${selectedYear})`}
+                  </CardTitle>
+                  <CardDescription>
+                    {isDistrictSelected
+                      ? `Volume across tehsils in ${activeDistrict.name}`
+                      : 'Top five Madhya Pradesh districts by volume'}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="h-[280px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={districtChart} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+                    <BarChart data={regionalData} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
                       <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 3" />
-                      <XAxis dataKey="district" tick={AXIS_TICK} tickLine={false} axisLine={AXIS_LINE} />
+                      <XAxis dataKey={xAxisKey} tick={AXIS_TICK} tickLine={false} axisLine={AXIS_LINE} />
                       <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} />
                       <Tooltip content={<ChartTooltip />} cursor={{ fill: 'hsl(var(--muted) / 0.5)' }} />
                       <Bar dataKey="deedsNum" name="Deeds" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} maxBarSize={48} />
@@ -320,14 +416,18 @@ export default function GovernmentAnalytics() {
               <Card className="h-full shadow-card">
                 <CardHeader>
                   <CardTitle className="text-base">Compliance Rate</CardTitle>
-                  <CardDescription>Digitization compliance by district</CardDescription>
+                  <CardDescription>
+                    {isDistrictSelected
+                      ? `Digitization compliance across tehsils in ${activeDistrict.name}`
+                      : 'Digitization compliance by district'}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="h-[280px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={districtChart} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
+                    <LineChart data={regionalData} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
                       <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 3" />
-                      <XAxis dataKey="district" tick={AXIS_TICK} tickLine={false} axisLine={AXIS_LINE} />
-                      <YAxis domain={[90, 100]} tick={AXIS_TICK} tickLine={false} axisLine={false} unit="%" />
+                      <XAxis dataKey={xAxisKey} tick={AXIS_TICK} tickLine={false} axisLine={AXIS_LINE} />
+                      <YAxis domain={isDistrictSelected ? [80, 100] : [85, 100]} tick={AXIS_TICK} tickLine={false} axisLine={false} unit="%" />
                       <Tooltip content={<ChartTooltip formatter={(v) => `${v}%`} />} cursor={{ stroke: 'hsl(var(--border))' }} />
                       <Line
                         type="monotone"
@@ -352,14 +452,20 @@ export default function GovernmentAnalytics() {
             <Reveal className="lg:col-span-2">
               <Card className="h-full shadow-card">
                 <CardHeader>
-                  <CardTitle className="text-base">Stamp Revenue vs Deeds by District</CardTitle>
-                  <CardDescription>Revenue in ₹ Crore alongside deed volume ({selectedYear})</CardDescription>
+                  <CardTitle className="text-base">
+                    {isDistrictSelected ? 'Stamp Revenue vs Deeds by Tehsil' : 'Stamp Revenue vs Deeds by District'}
+                  </CardTitle>
+                  <CardDescription>
+                    {isDistrictSelected
+                      ? `Revenue in ₹ Crore alongside deed volume in ${activeDistrict.name} (${selectedYear})`
+                      : `Revenue in ₹ Crore alongside deed volume across Madhya Pradesh (${selectedYear})`}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={districtChart} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+                    <BarChart data={regionalData} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
                       <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 3" />
-                      <XAxis dataKey="district" tick={AXIS_TICK} tickLine={false} axisLine={AXIS_LINE} />
+                      <XAxis dataKey={xAxisKey} tick={AXIS_TICK} tickLine={false} axisLine={AXIS_LINE} />
                       <YAxis yAxisId="left" tick={AXIS_TICK} tickLine={false} axisLine={false} />
                       <YAxis yAxisId="right" orientation="right" tick={AXIS_TICK} tickLine={false} axisLine={false} unit=" Cr" />
                       <Tooltip
@@ -382,30 +488,33 @@ export default function GovernmentAnalytics() {
             <Reveal delay={0.1}>
               <Card className="h-full shadow-card">
                 <CardHeader>
-                  <CardTitle className="text-base">Revenue Leaderboard</CardTitle>
-                  <CardDescription>Stamp revenue collected per district</CardDescription>
+                  <CardTitle className="text-base">
+                    {isDistrictSelected ? 'Revenue Leaderboard — Tehsils' : 'Revenue Leaderboard'}
+                  </CardTitle>
+                  <CardDescription>
+                    {isDistrictSelected
+                      ? `Stamp revenue collected per tehsil in ${activeDistrict.name}`
+                      : 'Stamp revenue collected per MP district'}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-4">
-                  {districtChart.map((row) => {
-                    const max = districtChart[0].revenueNum;
-                    return (
-                      <div key={row.rank} className="flex flex-col gap-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-semibold">
-                            <span className="mr-2 font-mono text-muted-foreground">#{row.rank}</span>
-                            {row.district}
-                          </span>
-                          <span className="font-mono font-semibold">{row.revenue}</span>
-                        </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-warning transition-all duration-500"
-                            style={{ width: `${Math.round((row.revenueNum / max) * 100)}%` }}
-                          />
-                        </div>
+                  {leaderboardData.map((row) => (
+                    <div key={row.rank || row.name} className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold">
+                          <span className="mr-2 font-mono text-muted-foreground">#{row.rank}</span>
+                          {row.name || row.district}
+                        </span>
+                        <span className="font-mono font-semibold">{fmtCr(row.revenueRaw)}</span>
                       </div>
-                    );
-                  })}
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-warning transition-all duration-500"
+                          style={{ width: `${Math.round((row.revenueNum / maxLeaderboardRevenue) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             </Reveal>

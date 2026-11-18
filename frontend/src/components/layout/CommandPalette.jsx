@@ -12,16 +12,18 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from '@/components/ui/command';
-import { PORTAL_NAV } from '@/config/navigation';
+import { PORTAL_NAV, portalForRole } from '@/config/navigation';
 import { useAuth } from '../../hooks/useAuth';
 
 /**
  * Global Ctrl/Cmd+K palette for jumping between portal pages.
  */
-export default function CommandPalette({ open, onOpenChange, portal = 'citizen', onLogout }) {
+export default function CommandPalette({ open, onOpenChange, portal: portalProp = 'citizen', onLogout }) {
   const navigate = useNavigate();
   const { setTheme, resolvedTheme } = useTheme();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  // Always search only the current role's nav entries.
+  const portal = user?.role ? portalForRole(user.role) : portalProp;
   const sections = PORTAL_NAV[portal] || PORTAL_NAV.citizen;
 
   useEffect(() => {
