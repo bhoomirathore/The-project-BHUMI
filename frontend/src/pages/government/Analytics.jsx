@@ -44,7 +44,18 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-const toNumber = (s) => Number(String(s).replace(/[^0-9.]/g, ''));
+import {
+  DEED_TYPES,
+  DISTRICT_RANKINGS,
+  APP_STATS,
+  TOTAL_REVENUE_RS,
+  AVG_MUTATION_DAYS,
+  HASH_VERIFIED_PCT,
+  NODE_UPTIME_PCT,
+  fmt,
+  fmtCr,
+  fmtLakh,
+} from '@/data/hqSampleData';
 
 function ChartTooltip({ active, payload, label, formatter }) {
   if (!active || !payload?.length) return null;
@@ -68,39 +79,19 @@ const AXIS_TICK = { fill: 'hsl(var(--muted-foreground))', fontSize: 11 };
 const AXIS_LINE = { stroke: 'hsl(var(--border))' };
 
 export default function GovernmentAnalytics() {
-  const [selectedYear, setSelectedYear] = useState('2024');
-
-  const deedTypes = [
-    { type: 'Sale Deed', count: '84,210', pct: 56, color: 'hsl(var(--primary))' },
-    { type: 'Gift Deed', count: '28,140', pct: 19, color: 'hsl(var(--success))' },
-    { type: 'Mortgage Deed', count: '18,320', pct: 12, color: 'hsl(var(--warning))' },
-    { type: 'Partition Deed', count: '11,430', pct: 8, color: 'hsl(var(--info))' },
-    { type: 'Lease / Other', count: '6,202', pct: 5, color: 'hsl(var(--destructive))' },
-  ];
-
-  // Sample data — Madhya Pradesh districts only. Not official government figures.
-  const districtRankings = [
-    { rank: 1, district: 'Bhopal', deeds: '24,890', revenue: '₹ 142 Cr', compliance: '98%' },
-    { rank: 2, district: 'Indore', deeds: '21,340', revenue: '₹ 118 Cr', compliance: '97%' },
-    { rank: 3, district: 'Jabalpur', deeds: '19,820', revenue: '₹ 105 Cr', compliance: '96%' },
-    { rank: 4, district: 'Gwalior', deeds: '16,740', revenue: '₹ 89 Cr', compliance: '95%' },
-    { rank: 5, district: 'Ujjain', deeds: '14,210', revenue: '₹ 78 Cr', compliance: '94%' },
-  ];
+  const [selectedYear, setSelectedYear] = useState('2026');
 
   const deedChart = useMemo(
-    () => deedTypes.map((d) => ({ ...d, value: toNumber(d.count) })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    () => DEED_TYPES.map((d) => ({ ...d, value: d.count })),
     []
   );
   const districtChart = useMemo(
     () =>
-      districtRankings.map((d) => ({
+      DISTRICT_RANKINGS.map((d) => ({
         ...d,
-        deedsNum: toNumber(d.deeds),
-        revenueNum: toNumber(d.revenue),
-        complianceNum: toNumber(d.compliance),
+        deedsNum: d.deeds,
+        complianceNum: d.compliance,
       })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 
@@ -130,9 +121,7 @@ export default function GovernmentAnalytics() {
                   <SelectValue placeholder="Year" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="2024">2024</SelectItem>
-                  <SelectItem value="2023">2023</SelectItem>
-                  <SelectItem value="2022">2022</SelectItem>
+                  <SelectItem value="2026">2026</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -148,45 +137,45 @@ export default function GovernmentAnalytics() {
       <section className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4" aria-label="Summary">
         <StatCard
           label="Total Deeds"
-          value="1,48,302"
+          value={fmt(APP_STATS.completed)}
           icon={FileText}
           hint={
             <span className="inline-flex items-center gap-1 font-medium text-success-foreground">
-              <TrendingUp className="h-3 w-3" aria-hidden="true" /> 12.4% YoY
+              <TrendingUp className="h-3 w-3" aria-hidden="true" /> +3.2% vs last month
             </span>
           }
           delay={0}
         />
         <StatCard
           label="Stamp Revenue"
-          value="₹842Cr"
+          value={fmtCr(TOTAL_REVENUE_RS)}
           icon={IndianRupee}
           tone="warning"
           hint={
             <span className="inline-flex items-center gap-1 font-medium text-success-foreground">
-              <TrendingUp className="h-3 w-3" aria-hidden="true" /> 9.1% YoY
+              <TrendingUp className="h-3 w-3" aria-hidden="true" /> +2.1% vs last month
             </span>
           }
           delay={0.05}
         />
         <StatCard
           label="Avg Mutation Time"
-          value="3.2 Days"
+          value={`${AVG_MUTATION_DAYS} Days`}
           icon={Clock}
           tone="info"
           hint={
             <span className="inline-flex items-center gap-1 font-medium text-success-foreground">
-              <TrendingDown className="h-3 w-3" aria-hidden="true" /> 1.8d vs 2023
+              <TrendingDown className="h-3 w-3" aria-hidden="true" /> 0.9d faster vs last month
             </span>
           }
           delay={0.1}
         />
         <StatCard
           label="Blockchain Verification"
-          value="100%"
+          value={`${HASH_VERIFIED_PCT}%`}
           icon={ShieldCheck}
           tone="success"
-          hint="Node uptime 99.98%"
+          hint={`${NODE_UPTIME_PCT}% node uptime`}
           delay={0.15}
         />
       </section>
@@ -232,7 +221,7 @@ export default function GovernmentAnalytics() {
                     </ResponsiveContainer>
                   </div>
                   <ul className="mt-2 flex flex-col gap-3" aria-label="Deed type distribution">
-                    {deedTypes.map((item) => (
+                    {DEED_TYPES.map((item) => (
                       <li key={item.type} className="flex flex-col gap-1.5">
                         <div className="flex justify-between text-xs">
                           <span className="inline-flex items-center gap-2 font-semibold text-foreground">
@@ -240,7 +229,7 @@ export default function GovernmentAnalytics() {
                             {item.type}
                           </span>
                           <span className="font-mono text-muted-foreground">
-                            {item.count} ({item.pct}%)
+                            {fmt(item.count)} ({item.pct}%)
                           </span>
                         </div>
                         <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -275,7 +264,7 @@ export default function GovernmentAnalytics() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {districtRankings.map((row) => (
+                        {DISTRICT_RANKINGS.map((row) => (
                           <TableRow key={row.rank} className="hover:bg-muted/40">
                             <TableCell className="px-4 py-3 font-bold">
                               <span className="inline-flex items-center gap-1.5">
@@ -283,10 +272,10 @@ export default function GovernmentAnalytics() {
                               </span>
                             </TableCell>
                             <TableCell className="py-3 font-semibold">{row.district}</TableCell>
-                            <TableCell className="py-3 font-mono">{row.deeds}</TableCell>
-                            <TableCell className="py-3 font-mono">{row.revenue}</TableCell>
+                            <TableCell className="py-3 font-mono">{fmt(row.deeds)}</TableCell>
+                            <TableCell className="py-3 font-mono">{fmtLakh(row.revenueRaw)}</TableCell>
                             <TableCell className="py-3 pr-4">
-                              <Badge variant="success">{row.compliance}</Badge>
+                              <Badge variant="success">{row.complianceStr}</Badge>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -333,7 +322,7 @@ export default function GovernmentAnalytics() {
                     <LineChart data={districtChart} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
                       <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 3" />
                       <XAxis dataKey="district" tick={AXIS_TICK} tickLine={false} axisLine={AXIS_LINE} />
-                      <YAxis domain={[90, 100]} tick={AXIS_TICK} tickLine={false} axisLine={false} unit="%" />
+                      <YAxis domain={[85, 100]} tick={AXIS_TICK} tickLine={false} axisLine={false} unit="%" />
                       <Tooltip content={<ChartTooltip formatter={(v) => `${v}%`} />} cursor={{ stroke: 'hsl(var(--border))' }} />
                       <Line
                         type="monotone"
@@ -359,7 +348,7 @@ export default function GovernmentAnalytics() {
               <Card className="h-full shadow-card">
                 <CardHeader>
                   <CardTitle className="text-base">Stamp Revenue vs Deeds by District</CardTitle>
-                  <CardDescription>Revenue in ₹ Crore alongside deed volume ({selectedYear})</CardDescription>
+                  <CardDescription>Revenue in ₹ Lakh alongside deed volume ({selectedYear})</CardDescription>
                 </CardHeader>
                 <CardContent className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
@@ -367,18 +356,18 @@ export default function GovernmentAnalytics() {
                       <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeDasharray="3 3" />
                       <XAxis dataKey="district" tick={AXIS_TICK} tickLine={false} axisLine={AXIS_LINE} />
                       <YAxis yAxisId="left" tick={AXIS_TICK} tickLine={false} axisLine={false} />
-                      <YAxis yAxisId="right" orientation="right" tick={AXIS_TICK} tickLine={false} axisLine={false} unit=" Cr" />
+                      <YAxis yAxisId="right" orientation="right" tick={AXIS_TICK} tickLine={false} axisLine={false} unit=" L" />
                       <Tooltip
                         content={
                           <ChartTooltip
-                            formatter={(v, p) => (p.dataKey === 'revenueNum' ? `₹ ${v} Cr` : Number(v).toLocaleString('en-IN'))}
+                            formatter={(v, p) => (p.dataKey === 'revenueL' ? `₹ ${v} L` : Number(v).toLocaleString('en-IN'))}
                           />
                         }
                         cursor={{ fill: 'hsl(var(--muted) / 0.5)' }}
                       />
                       <Legend wrapperStyle={{ fontSize: 12, color: 'hsl(var(--muted-foreground))' }} />
                       <Bar yAxisId="left" dataKey="deedsNum" name="Deeds" fill="hsl(var(--primary) / 0.35)" radius={[6, 6, 0, 0]} maxBarSize={40} />
-                      <Bar yAxisId="right" dataKey="revenueNum" name="Revenue (₹ Cr)" fill="hsl(var(--warning))" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                      <Bar yAxisId="right" dataKey="revenueL" name="Revenue (₹ Lakh)" fill="hsl(var(--warning))" radius={[6, 6, 0, 0]} maxBarSize={40} />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -393,7 +382,7 @@ export default function GovernmentAnalytics() {
                 </CardHeader>
                 <CardContent className="flex flex-col gap-4">
                   {districtChart.map((row) => {
-                    const max = districtChart[0].revenueNum;
+                    const max = districtChart[0].revenueL;
                     return (
                       <div key={row.rank} className="flex flex-col gap-1.5">
                         <div className="flex items-center justify-between text-xs">
@@ -401,12 +390,12 @@ export default function GovernmentAnalytics() {
                             <span className="mr-2 font-mono text-muted-foreground">#{row.rank}</span>
                             {row.district}
                           </span>
-                          <span className="font-mono font-semibold">{row.revenue}</span>
+                          <span className="font-mono font-semibold">{fmtLakh(row.revenueRaw)}</span>
                         </div>
                         <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                           <div
                             className="h-full rounded-full bg-warning transition-all duration-500"
-                            style={{ width: `${Math.round((row.revenueNum / max) * 100)}%` }}
+                            style={{ width: `${Math.round((row.revenueL / max) * 100)}%` }}
                           />
                         </div>
                       </div>

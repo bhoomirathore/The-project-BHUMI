@@ -30,33 +30,13 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-
-// Sample data — Madhya Pradesh tehsils only. Not official government figures.
-const TEHSIL_DATA = [
-  // Bhopal
-  { name: 'Huzur',    district: 'Bhopal',   registries: 8420, mutations: 3210, pending: 284, coverage: 97, status: 'active' },
-  { name: 'Berasia',  district: 'Bhopal',   registries: 4180, mutations: 1640, pending: 512, coverage: 88, status: 'pending' },
-  { name: 'Kolar',    district: 'Bhopal',   registries: 2930, mutations:  980, pending: 120, coverage: 94, status: 'active' },
-  // Indore
-  { name: 'Sanwer',   district: 'Indore',   registries: 9840, mutations: 4120, pending: 340, coverage: 98, status: 'active' },
-  { name: 'Depalpur', district: 'Indore',   registries: 5210, mutations: 2180, pending: 189, coverage: 95, status: 'active' },
-  { name: 'Mhow',     district: 'Indore',   registries: 3760, mutations: 1490, pending: 421, coverage: 87, status: 'pending' },
-  // Jabalpur
-  { name: 'Patan',    district: 'Jabalpur', registries: 7840, mutations: 3280, pending: 218, coverage: 96, status: 'active' },
-  { name: 'Sihora',   district: 'Jabalpur', registries: 3120, mutations: 1140, pending: 380, coverage: 82, status: 'pending' },
-  { name: 'Panagar',  district: 'Jabalpur', registries: 2480, mutations:  890, pending: 640, coverage: 71, status: 'inactive' },
-  // Gwalior
-  { name: 'Gwalior',  district: 'Gwalior',  registries: 8190, mutations: 3410, pending: 290, coverage: 97, status: 'active' },
-  { name: 'Dabra',    district: 'Gwalior',  registries: 3490, mutations: 1360, pending: 452, coverage: 85, status: 'pending' },
-  { name: 'Bhitarwar',district: 'Gwalior',  registries: 2860, mutations: 1020, pending: 320, coverage: 89, status: 'active' },
-  // Ujjain
-  { name: 'Ujjain',   district: 'Ujjain',   registries: 9120, mutations: 3840, pending: 180, coverage: 98, status: 'active' },
-  { name: 'Nagda',    district: 'Ujjain',   registries: 4280, mutations: 1680, pending: 390, coverage: 90, status: 'active' },
-  { name: 'Mahidpur', district: 'Ujjain',   registries: 2940, mutations: 1090, pending: 510, coverage: 83, status: 'pending' },
-  { name: 'Badnagar', district: 'Ujjain',   registries: 1840, mutations:  620, pending: 720, coverage: 68, status: 'inactive' },
-];
-
-const DISTRICTS = ['Bhopal', 'Indore', 'Jabalpur', 'Gwalior', 'Ujjain'];
+import {
+  TEHSIL_DATA,
+  PILOT_DISTRICTS as DISTRICTS,
+  TEHSIL_COUNTS,
+  TODAY_REGISTRATIONS,
+  NODE_UPTIME_PCT,
+} from '@/data/hqSampleData';
 
 const STATUS_META = {
   active:   { label: 'Active',   badge: 'success', dot: 'bg-success',     live: true  },
@@ -142,15 +122,7 @@ export default function GovernmentMonitoring() {
   const totalPages = Math.ceil(filtered.length / perPage) || 1;
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
-  const counts = useMemo(
-    () => ({
-      all:      TEHSIL_DATA.length,
-      active:   TEHSIL_DATA.filter((r) => r.status === 'active').length,
-      pending:  TEHSIL_DATA.filter((r) => r.status === 'pending').length,
-      inactive: TEHSIL_DATA.filter((r) => r.status === 'inactive').length,
-    }),
-    []
-  );
+  const counts = TEHSIL_COUNTS;
 
   const exportCSV = () => {
     toast.info('Exporting Tehsil Monitoring data as CSV...');
@@ -201,10 +173,24 @@ export default function GovernmentMonitoring() {
 
       {/* KPI Strip */}
       <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4" aria-label="Network KPIs">
-        <StatCard label="Active Tehsils" value="358 Nodes" icon={ServerCog} tone="success" hint="100% Online" delay={0} />
-        <StatCard label="Today's Registrations" value={1842} icon={Activity} tone="info" hint="Across Madhya Pradesh" delay={0.05} />
-        <StatCard label="Blockchain Latency" value="1.2 sec" icon={Timer} hint="Consensus Finality" delay={0.1} />
-        <StatCard label="Sync Status" value="Healthy" icon={Gauge} tone="success" hint="Block #10484" delay={0.15} />
+        <StatCard
+          label="Active Tehsils"
+          value={`${TEHSIL_COUNTS.active} Nodes`}
+          icon={ServerCog}
+          tone="success"
+          hint={`${TEHSIL_COUNTS.active} / ${TEHSIL_COUNTS.all} Online`}
+          delay={0}
+        />
+        <StatCard
+          label="Today's Registrations"
+          value={TODAY_REGISTRATIONS}
+          icon={Activity}
+          tone="info"
+          hint="Across 15 pilot tehsils"
+          delay={0.05}
+        />
+        <StatCard label="Blockchain Latency" value="1.2 sec" icon={Timer} hint="Confirmation time" delay={0.1} />
+        <StatCard label="Sync Status" value="Healthy" icon={Gauge} tone="success" hint={`${NODE_UPTIME_PCT}% uptime`} delay={0.15} />
       </section>
 
       {/* Filter Controls */}
