@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronsLeft, ChevronsRight, LogOut, Menu, Search, Settings, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../hooks/useAuth';
-import { PORTAL_META, PORTAL_NAV } from '@/config/navigation';
+import { PORTAL_META, PORTAL_NAV, portalForRole } from '@/config/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -49,9 +49,10 @@ function initials(name = '') {
 function NavItem({ link, collapsed, onNavigate }) {
   const Icon = link.icon;
   const location = useLocation();
+  // Dashboard routes match only exact paths; all other routes also match child paths.
   const isActive =
     location.pathname === link.to ||
-    (link.to !== '/' && !link.to.endsWith('/dashboard') && location.pathname.startsWith(link.to + '/'));
+    (!link.to.endsWith('/dashboard') && location.pathname.startsWith(link.to + '/'));
 
   const item = (
     <NavLink
@@ -87,15 +88,25 @@ function NavItem({ link, collapsed, onNavigate }) {
   );
 }
 
-function SidebarBody({ portal, collapsed, onToggleCollapse, onNavigate, onLogoutRequest, onOpenSearch }) {
+/** Maps auth role → human-readable label shown under the user name in the sidebar. */
+const ROLE_LABEL = {
+  CITIZEN: 'Citizen',
+  REGISTRAR: 'Registrar',
+  GOVERNMENT_HQ: 'Government HQ',
+};
+
+function SidebarBody({ portal: portalProp, collapsed, onToggleCollapse, onNavigate, onLogoutRequest, onOpenSearch }) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  // Always derive the active portal from the logged-in user's role so the sidebar
+  // matches the actual session even when the page forgets to pass the prop.
+  const portal = user?.role ? portalForRole(user.role) : (portalProp || 'citizen');
   const meta = PORTAL_META[portal] || PORTAL_META.citizen;
   const sections = PORTAL_NAV[portal] || PORTAL_NAV.citizen;
 
   const displayName = user?.name || meta.name;
   const displayAvatar = user?.avatar || (user?.name ? initials(user.name) : meta.avatar);
-  const displayRole = user?.role === 'CITIZEN' ? 'Citizen' : meta.role;
+  const displayRole = (user?.role && ROLE_LABEL[user.role]) || meta.role;
   const displayBadge = user?.role || meta.badge;
 
   return (
@@ -264,12 +275,15 @@ function SidebarBody({ portal, collapsed, onToggleCollapse, onNavigate, onLogout
   );
 }
 
-export default function Sidebar({ portal = 'citizen', onOpenSearch, mobileOpen, onMobileOpenChange, collapsed: collapsedProp, onCollapsedChange }) {
+export default function Sidebar({ portal: portalProp = 'citizen', onOpenSearch, mobileOpen, onMobileOpenChange, collapsed: collapsedProp, onCollapsedChange }) {
   const [collapsedState, setCollapsedState] = useState(readCollapsed);
   const [mobileState, setMobileState] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+
+  // Always prefer the role from the auth context over the passed prop.
+  const portal = user?.role ? portalForRole(user.role) : portalProp;
 
   const collapsed = collapsedProp ?? collapsedState;
   const setCollapsed = (v) => {
