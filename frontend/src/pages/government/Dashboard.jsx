@@ -130,8 +130,8 @@ export default function GovernmentDashboard() {
 
       {/* Regional Stream */}
       <Section
-        title="Divisional Land Transaction Stream"
-        description="Sample pending application activity across Madhya Pradesh pilot divisions"
+        title="District Land Transaction Stream"
+        description="Sample pending application activity across Madhya Pradesh pilot districts"
       >
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           <Reveal className="lg:col-span-2">
@@ -141,7 +141,7 @@ export default function GovernmentDashboard() {
                   <Table className="min-w-[640px]">
                     <TableHeader>
                       <TableRow className="bg-muted/40 hover:bg-muted/40">
-                        <TableHead className="px-4">Division / District</TableHead>
+                        <TableHead className="px-4">District</TableHead>
                         <TableHead className="px-4">Pending Applications</TableHead>
                         <TableHead className="px-4">Total Registered Area</TableHead>
                         <TableHead className="px-4">Sync Health</TableHead>
@@ -151,9 +151,9 @@ export default function GovernmentDashboard() {
                     <TableBody>
                       {DIVISION_STREAM.map((row) => (
                         <TableRow
-                          key={row.region}
+                          key={row.slug}
                           className="cursor-pointer hover:bg-muted/40"
-                          onClick={() => navigate('/government/analytics')}
+                          onClick={() => navigate(`/government/analytics?district=${row.slug}`)}
                         >
                           <TableCell className="px-4 py-4 font-bold">
                             <span className="inline-flex items-center gap-2">
@@ -175,7 +175,7 @@ export default function GovernmentDashboard() {
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate('/government/analytics');
+                                navigate(`/government/analytics?district=${row.slug}`);
                               }}
                             >
                               View Analytics
@@ -194,8 +194,8 @@ export default function GovernmentDashboard() {
           <Reveal delay={0.1}>
             <Card className="h-full shadow-card">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">Pending Applications by Division</CardTitle>
-                <CardDescription>Sample application backlog per division</CardDescription>
+                <CardTitle className="text-base">Pending Applications by District</CardTitle>
+                <CardDescription>Sample application backlog per district</CardDescription>
               </CardHeader>
               <CardContent className="h-[240px] pt-2">
                 <ResponsiveContainer width="100%" height="100%">

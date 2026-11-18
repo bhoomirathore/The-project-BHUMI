@@ -3,11 +3,19 @@
  *
  * IMPORTANT — NOT OFFICIAL DATA.
  * All numbers are illustrative sample figures for a prototype pilot covering
- * 15 tehsils across 5 MP districts.  Do not present as actual government data.
+ * 15 tehsils across 5 MP districts. Do not present as actual government data.
  *
  * Pilot scope  : 15 tehsils · 5 districts · 3 tehsils each · reference year 2026
  * Area basis   : ~12,480 land parcels digitised · ~3,200 Ha registered area
- * Stamp duty   : avg ₹8,540 per registered transfer (illustrative, not official)
+ * Reference    : 2,415 completed deeds on platform across 5 pilot districts
+ *
+ * STAMP DUTY ASSUMPTIONS (illustrative sample averages per deed type):
+ * - Sale Deed      : ~₹ 3,00,000 (₹ 3.0 Lakh avg duty)
+ * - Gift Deed      : ~₹   60,000 (₹ 0.6 Lakh avg duty)
+ * - Mortgage Deed  : ~₹   40,000 (₹ 0.4 Lakh avg duty)
+ * - Partition Deed : ~₹   30,000 (₹ 0.3 Lakh avg duty)
+ * - Lease / Other  : ~₹   25,000 (₹ 0.25 Lakh avg duty)
+ * Total statewide revenue lands in the tens of crores (₹ 45.0 Cr).
  */
 
 // ─── Formatting helpers ────────────────────────────────────────────────────
@@ -18,8 +26,24 @@ export const fmtCr = (n) => `₹\u00a0${(n / 1e7).toFixed(1)}\u00a0Cr`;
 /** ₹ in Lakh with 1 decimal (pass raw rupees) */
 export const fmtLakh = (n) => `₹\u00a0${(n / 1e5).toFixed(1)}\u00a0L`;
 
-// ─── Pilot geography ───────────────────────────────────────────────────────
-/** Registered area (Ha) per pilot district — sums to TOTAL_AREA_HA */
+// ─── Stamp Duty Assumptions ────────────────────────────────────────────────
+export const STAMP_DUTY_ASSUMPTIONS_RS = {
+  'Sale Deed':      300_000,
+  'Gift Deed':       60_000,
+  'Mortgage Deed':   40_000,
+  'Partition Deed':  30_000,
+  'Lease / Other':   25_000,
+};
+
+export const DEED_COLORS = {
+  'Sale Deed':      'hsl(var(--primary))',
+  'Gift Deed':      'hsl(var(--success))',
+  'Mortgage Deed':  'hsl(var(--warning))',
+  'Partition Deed': 'hsl(var(--info))',
+  'Lease / Other':  'hsl(var(--destructive))',
+};
+
+// ─── Pilot Geography & Area ────────────────────────────────────────────────
 const DISTRICT_AREA_HA = {
   Bhopal:   982,
   Indore:   847,
@@ -29,41 +53,366 @@ const DISTRICT_AREA_HA = {
 };
 
 export const PILOT_DISTRICTS = Object.keys(DISTRICT_AREA_HA);
-
-/** Total registered area across all pilot tehsils = 3,200 Ha */
 export const TOTAL_AREA_HA = Object.values(DISTRICT_AREA_HA).reduce((s, v) => s + v, 0);
 
-// ─── Tehsil monitoring data ────────────────────────────────────────────────
-// 14 active + 1 pending (Kolar) = 15 tehsils → "14 / 15 online".
-// registries : cumulative on-platform registrations since pilot launch.
-// mutations  : cumulative mutation entries recorded.
-// pending    : applications currently awaiting officer action.
-// coverage   : % of plot records for that tehsil digitised (not 100% anywhere).
+// ─── Raw District & Tehsil Data Structure ──────────────────────────────────
+// Consistency check targets:
+// Statewide deeds: 2,415
+// Deed types statewide: Sale 1340, Gift 456, Mortgage 302, Partition 193, Lease 124
+// Deeds per district: Bhopal 680, Indore 612, Jabalpur 489, Gwalior 374, Ujjain 260
 
-export const TEHSIL_DATA = [
-  // ── Bhopal ──────────────────────────────────────────────────────────────
-  { name: 'Huzur',     district: 'Bhopal',   registries: 198, mutations: 142, pending:  23, coverage: 93.4, status: 'active'  },
-  { name: 'Berasia',   district: 'Bhopal',   registries: 134, mutations:  97, pending:  31, coverage: 86.2, status: 'active'  },
-  { name: 'Kolar',     district: 'Bhopal',   registries:  89, mutations:  61, pending:  44, coverage: 78.8, status: 'pending' },
-  // ── Indore ──────────────────────────────────────────────────────────────
-  { name: 'Sanwer',    district: 'Indore',   registries: 187, mutations: 136, pending:  19, coverage: 94.1, status: 'active'  },
-  { name: 'Depalpur',  district: 'Indore',   registries: 143, mutations: 104, pending:  28, coverage: 89.6, status: 'active'  },
-  { name: 'Mhow',      district: 'Indore',   registries: 112, mutations:  78, pending:  37, coverage: 83.5, status: 'active'  },
-  // ── Jabalpur ────────────────────────────────────────────────────────────
-  { name: 'Patan',     district: 'Jabalpur', registries: 171, mutations: 121, pending:  24, coverage: 91.8, status: 'active'  },
-  { name: 'Sihora',    district: 'Jabalpur', registries:  98, mutations:  68, pending:  41, coverage: 81.3, status: 'active'  },
-  { name: 'Panagar',   district: 'Jabalpur', registries:  76, mutations:  52, pending:  55, coverage: 74.6, status: 'active'  },
-  // ── Gwalior ─────────────────────────────────────────────────────────────
-  { name: 'Gwalior',   district: 'Gwalior',  registries: 184, mutations: 128, pending:  22, coverage: 92.7, status: 'active'  },
-  { name: 'Dabra',     district: 'Gwalior',  registries: 109, mutations:  73, pending:  38, coverage: 85.4, status: 'active'  },
-  { name: 'Bhitarwar', district: 'Gwalior',  registries:  83, mutations:  57, pending:  47, coverage: 77.9, status: 'active'  },
-  // ── Ujjain ──────────────────────────────────────────────────────────────
-  { name: 'Ujjain',    district: 'Ujjain',   registries: 162, mutations: 118, pending:  21, coverage: 94.8, status: 'active'  },
-  { name: 'Nagda',     district: 'Ujjain',   registries: 118, mutations:  84, pending:  33, coverage: 87.3, status: 'active'  },
-  { name: 'Mahidpur',  district: 'Ujjain',   registries:  71, mutations:  48, pending:  52, coverage: 72.1, status: 'active'  },
+const RAW_DISTRICTS_DATA = [
+  {
+    name: 'Bhopal District',
+    district: 'Bhopal',
+    slug: 'bhopal',
+    areaHa: 982,
+    avgMutationDays: 4.6,
+    verificationPct: 99.4,
+    nodeUptimePct: 98.7,
+    tehsils: [
+      {
+        name: 'Huzur',
+        district: 'Bhopal',
+        deedCounts: { 'Sale Deed': 215, 'Gift Deed': 60, 'Mortgage Deed': 30, 'Partition Deed': 22, 'Lease / Other': 21 },
+        compliance: 95.2,
+        mutationDays: 4.2,
+        // Monitoring values:
+        registries: 198, mutations: 142, pending: 23, coverage: 93.4, status: 'active',
+      },
+      {
+        name: 'Berasia',
+        district: 'Bhopal',
+        deedCounts: { 'Sale Deed': 120, 'Gift Deed': 38, 'Mortgage Deed': 18, 'Partition Deed': 13, 'Lease / Other': 13 },
+        compliance: 92.4,
+        mutationDays: 4.8,
+        // Monitoring values:
+        registries: 134, mutations: 97, pending: 31, coverage: 86.2, status: 'active',
+      },
+      {
+        name: 'Kolar',
+        district: 'Bhopal',
+        deedCounts: { 'Sale Deed': 80, 'Gift Deed': 22, 'Mortgage Deed': 12, 'Partition Deed': 8, 'Lease / Other': 8 },
+        compliance: 90.8,
+        mutationDays: 5.2,
+        // Monitoring values:
+        registries: 89, mutations: 61, pending: 44, coverage: 78.8, status: 'pending',
+      },
+    ],
+  },
+  {
+    name: 'Indore District',
+    district: 'Indore',
+    slug: 'indore',
+    areaHa: 847,
+    avgMutationDays: 3.9,
+    verificationPct: 99.6,
+    nodeUptimePct: 99.1,
+    tehsils: [
+      {
+        name: 'Sanwer',
+        district: 'Indore',
+        deedCounts: { 'Sale Deed': 185, 'Gift Deed': 42, 'Mortgage Deed': 24, 'Partition Deed': 13, 'Lease / Other': 10 },
+        compliance: 97.4,
+        mutationDays: 3.6,
+        // Monitoring values:
+        registries: 187, mutations: 136, pending: 19, coverage: 94.1, status: 'active',
+      },
+      {
+        name: 'Depalpur',
+        district: 'Indore',
+        deedCounts: { 'Sale Deed': 135, 'Gift Deed': 31, 'Mortgage Deed': 18, 'Partition Deed': 10, 'Lease / Other': 7 },
+        compliance: 96.5,
+        mutationDays: 4.0,
+        // Monitoring values:
+        registries: 143, mutations: 104, pending: 28, coverage: 89.6, status: 'active',
+      },
+      {
+        name: 'Mhow',
+        district: 'Indore',
+        deedCounts: { 'Sale Deed': 90, 'Gift Deed': 22, 'Mortgage Deed': 13, 'Partition Deed': 7, 'Lease / Other': 5 },
+        compliance: 95.8,
+        mutationDays: 4.3,
+        // Monitoring values:
+        registries: 112, mutations: 78, pending: 37, coverage: 83.5, status: 'active',
+      },
+    ],
+  },
+  {
+    name: 'Jabalpur District',
+    district: 'Jabalpur',
+    slug: 'jabalpur',
+    areaHa: 674,
+    avgMutationDays: 4.9,
+    verificationPct: 99.1,
+    nodeUptimePct: 97.9,
+    tehsils: [
+      {
+        name: 'Patan',
+        district: 'Jabalpur',
+        deedCounts: { 'Sale Deed': 110, 'Gift Deed': 42, 'Mortgage Deed': 30, 'Partition Deed': 36, 'Lease / Other': 14 },
+        compliance: 93.1,
+        mutationDays: 4.6,
+        // Monitoring values:
+        registries: 171, mutations: 121, pending: 24, coverage: 91.8, status: 'active',
+      },
+      {
+        name: 'Sihora',
+        district: 'Jabalpur',
+        deedCounts: { 'Sale Deed': 72, 'Gift Deed': 28, 'Mortgage Deed': 20, 'Partition Deed': 23, 'Lease / Other': 9 },
+        compliance: 90.5,
+        mutationDays: 5.1,
+        // Monitoring values:
+        registries: 98, mutations: 68, pending: 41, coverage: 81.3, status: 'active',
+      },
+      {
+        name: 'Panagar',
+        district: 'Jabalpur',
+        deedCounts: { 'Sale Deed': 48, 'Gift Deed': 20, 'Mortgage Deed': 14, 'Partition Deed': 16, 'Lease / Other': 7 },
+        compliance: 88.9,
+        mutationDays: 5.4,
+        // Monitoring values:
+        registries: 76, mutations: 52, pending: 55, coverage: 74.6, status: 'active',
+      },
+    ],
+  },
+  {
+    name: 'Gwalior District',
+    district: 'Gwalior',
+    slug: 'gwalior',
+    areaHa: 428,
+    avgMutationDays: 5.5,
+    verificationPct: 98.8,
+    nodeUptimePct: 97.4,
+    tehsils: [
+      {
+        name: 'Gwalior',
+        district: 'Gwalior',
+        deedCounts: { 'Sale Deed': 75, 'Gift Deed': 52, 'Mortgage Deed': 42, 'Partition Deed': 12, 'Lease / Other': 8 },
+        compliance: 90.6,
+        mutationDays: 5.1,
+        // Monitoring values:
+        registries: 184, mutations: 128, pending: 22, coverage: 92.7, status: 'active',
+      },
+      {
+        name: 'Dabra',
+        district: 'Gwalior',
+        deedCounts: { 'Sale Deed': 44, 'Gift Deed': 32, 'Mortgage Deed': 26, 'Partition Deed': 7, 'Lease / Other': 4 },
+        compliance: 87.8,
+        mutationDays: 5.7,
+        // Monitoring values:
+        registries: 109, mutations: 73, pending: 38, coverage: 85.4, status: 'active',
+      },
+      {
+        name: 'Bhitarwar',
+        district: 'Gwalior',
+        deedCounts: { 'Sale Deed': 26, 'Gift Deed': 21, 'Mortgage Deed': 17, 'Partition Deed': 5, 'Lease / Other': 3 },
+        compliance: 85.5,
+        mutationDays: 6.2,
+        // Monitoring values:
+        registries: 83, mutations: 57, pending: 47, coverage: 77.9, status: 'active',
+      },
+    ],
+  },
+  {
+    name: 'Ujjain District',
+    district: 'Ujjain',
+    slug: 'ujjain',
+    areaHa: 269,
+    avgMutationDays: 6.1,
+    verificationPct: 98.4,
+    nodeUptimePct: 96.8,
+    tehsils: [
+      {
+        name: 'Ujjain',
+        district: 'Ujjain',
+        deedCounts: { 'Sale Deed': 72, 'Gift Deed': 24, 'Mortgage Deed': 20, 'Partition Deed': 11, 'Lease / Other': 8 },
+        compliance: 89.8,
+        mutationDays: 5.8,
+        // Monitoring values:
+        registries: 162, mutations: 118, pending: 21, coverage: 94.8, status: 'active',
+      },
+      {
+        name: 'Nagda',
+        district: 'Ujjain',
+        deedCounts: { 'Sale Deed': 44, 'Gift Deed': 14, 'Mortgage Deed': 12, 'Partition Deed': 6, 'Lease / Other': 4 },
+        compliance: 87.2,
+        mutationDays: 6.2,
+        // Monitoring values:
+        registries: 118, mutations: 84, pending: 33, coverage: 87.3, status: 'active',
+      },
+      {
+        name: 'Mahidpur',
+        district: 'Ujjain',
+        deedCounts: { 'Sale Deed': 24, 'Gift Deed': 8, 'Mortgage Deed': 6, 'Partition Deed': 4, 'Lease / Other': 3 },
+        compliance: 84.4,
+        mutationDays: 6.7,
+        // Monitoring values:
+        registries: 71, mutations: 48, pending: 52, coverage: 72.1, status: 'active',
+      },
+    ],
+  },
 ];
 
-/** Status counts derived from TEHSIL_DATA — Monitoring tabs must equal these. */
+// Helper to calculate revenue from deed counts map
+function calcDeedRevenue(counts) {
+  return Object.entries(counts).reduce((sum, [type, count]) => {
+    const rate = STAMP_DUTY_ASSUMPTIONS_RS[type] || 0;
+    return sum + count * rate;
+  }, 0);
+}
+
+// ─── Processed District & Tehsil Hierarchy ─────────────────────────────────
+export const PROCESSED_DISTRICTS = RAW_DISTRICTS_DATA.map((dist) => {
+  // Process tehsils with computed deeds, revenues, and ranks
+  const processedTehsils = dist.tehsils.map((t) => {
+    const deeds = Object.values(t.deedCounts).reduce((s, c) => s + c, 0);
+    const revenueRaw = calcDeedRevenue(t.deedCounts);
+    return {
+      ...t,
+      deeds,
+      revenueRaw,
+      revenueCr: parseFloat((revenueRaw / 1e7).toFixed(2)),
+      revenueL: parseFloat((revenueRaw / 1e5).toFixed(1)),
+      complianceStr: `${t.compliance}%`,
+    };
+  });
+
+  // Sort tehsils by deeds descending and assign rank
+  processedTehsils.sort((a, b) => b.deeds - a.deeds);
+  const rankedTehsils = processedTehsils.map((t, idx) => ({
+    ...t,
+    rank: idx + 1,
+  }));
+
+  // Aggregate district totals
+  const deeds = rankedTehsils.reduce((s, t) => s + t.deeds, 0);
+  const revenueRaw = rankedTehsils.reduce((s, t) => s + t.revenueRaw, 0);
+  const compliance = parseFloat(
+    (rankedTehsils.reduce((s, t) => s + t.compliance * t.deeds, 0) / deeds).toFixed(1)
+  );
+
+  // Deed counts aggregated for this district
+  const deedCounts = {};
+  Object.keys(STAMP_DUTY_ASSUMPTIONS_RS).forEach((type) => {
+    deedCounts[type] = rankedTehsils.reduce((sum, t) => sum + (t.deedCounts[type] || 0), 0);
+  });
+
+  const deedTypes = Object.entries(deedCounts).map(([type, count]) => ({
+    type,
+    count,
+    pct: deeds > 0 ? parseFloat(((count / deeds) * 100).toFixed(1)) : 0,
+    color: DEED_COLORS[type],
+  }));
+
+  return {
+    ...dist,
+    deeds,
+    revenueRaw,
+    revenueCr: parseFloat((revenueRaw / 1e7).toFixed(1)),
+    revenueL: parseFloat((revenueRaw / 1e5).toFixed(1)),
+    compliance,
+    complianceStr: `${compliance}%`,
+    deedCounts,
+    deedTypes,
+    tehsils: rankedTehsils,
+  };
+});
+
+// Map keyed by district slug for instant lookup in Analytics
+export const DISTRICT_ANALYTICS_MAP = PROCESSED_DISTRICTS.reduce((acc, d) => {
+  acc[d.slug] = d;
+  return acc;
+}, {});
+
+export const VALID_DISTRICT_SLUGS = Object.keys(DISTRICT_ANALYTICS_MAP);
+
+export const PILOT_DISTRICTS_META = PROCESSED_DISTRICTS.map((d) => ({
+  slug: d.slug,
+  name: d.name,
+  district: d.district,
+}));
+
+// ─── Statewide Totals & Rankings ───────────────────────────────────────────
+// Verify: 680 + 612 + 489 + 374 + 260 = 2,415 deeds ✓
+export const TOTAL_COMPLETED_DEEDS = PROCESSED_DISTRICTS.reduce((s, d) => s + d.deeds, 0);
+
+// Total stamp revenue across pilot = ₹ 45,03,30,000 (tens of crores)
+export const TOTAL_REVENUE_RS = PROCESSED_DISTRICTS.reduce((s, d) => s + d.revenueRaw, 0);
+export const TOTAL_REVENUE_CR = parseFloat((TOTAL_REVENUE_RS / 1e7).toFixed(1)); // 45.0
+
+// Statewide deed type distribution
+export const DEED_TYPES = (() => {
+  const aggregated = {};
+  Object.keys(STAMP_DUTY_ASSUMPTIONS_RS).forEach((type) => {
+    aggregated[type] = PROCESSED_DISTRICTS.reduce((sum, d) => sum + (d.deedCounts[type] || 0), 0);
+  });
+  return Object.entries(aggregated).map(([type, count]) => ({
+    type,
+    count,
+    pct: parseFloat(((count / TOTAL_COMPLETED_DEEDS) * 100).toFixed(1)),
+    color: DEED_COLORS[type],
+  }));
+})();
+// Deed totals: Sale 1340, Gift 456, Mortgage 302, Partition 193, Lease 124 = 2,415 ✓
+
+// District performance rankings (ranked by deeds)
+export const DISTRICT_RANKINGS = [...PROCESSED_DISTRICTS]
+  .sort((a, b) => b.deeds - a.deeds)
+  .map((d, idx) => ({
+    rank: idx + 1,
+    district: d.district,
+    name: d.name,
+    slug: d.slug,
+    deeds: d.deeds,
+    revenueRaw: d.revenueRaw,
+    revenueCr: d.revenueCr,
+    revenueL: d.revenueL,
+    compliance: d.compliance,
+    complianceStr: d.complianceStr,
+  }));
+
+// Statewide average mutation time & verification
+export const AVG_MUTATION_DAYS = parseFloat(
+  (
+    PROCESSED_DISTRICTS.reduce((s, d) => s + d.avgMutationDays * d.deeds, 0) /
+    TOTAL_COMPLETED_DEEDS
+  ).toFixed(1)
+); // 4.8 Days ✓
+
+export const HASH_VERIFIED_PCT = parseFloat(
+  (
+    PROCESSED_DISTRICTS.reduce((s, d) => s + d.verificationPct * d.deeds, 0) /
+    TOTAL_COMPLETED_DEEDS
+  ).toFixed(1)
+); // 99.2% ✓
+
+export const NODE_UPTIME_PCT = 98.1; // % node uptime since pilot launch
+
+// Statewide KPI object
+export const STATE_KPIS = {
+  deeds: TOTAL_COMPLETED_DEEDS,
+  revenueRaw: TOTAL_REVENUE_RS,
+  revenueCr: TOTAL_REVENUE_CR,
+  avgMutationDays: AVG_MUTATION_DAYS,
+  verificationPct: HASH_VERIFIED_PCT,
+  uptimePct: NODE_UPTIME_PCT,
+  name: 'All Madhya Pradesh',
+};
+
+// ─── Tehsil Flat List (For Monitoring page) ────────────────────────────────
+export const TEHSIL_DATA = PROCESSED_DISTRICTS.flatMap((d) =>
+  d.tehsils.map((t) => ({
+    name: t.name,
+    district: t.district,
+    registries: t.registries,
+    mutations: t.mutations,
+    pending: t.pending,
+    coverage: t.coverage,
+    status: t.status,
+  }))
+);
+
 export const TEHSIL_COUNTS = {
   all:      TEHSIL_DATA.length,                                    // 15
   active:   TEHSIL_DATA.filter((r) => r.status === 'active').length,  // 14
@@ -71,118 +420,39 @@ export const TEHSIL_COUNTS = {
   inactive: TEHSIL_DATA.filter((r) => r.status === 'inactive').length,//  0
 };
 
-// ─── Application stats ─────────────────────────────────────────────────────
-// 3,260 total  =  2,415 completed  +  612 in-progress  +  148 rejected  +  85 sync-retry
-// Verify: 2415 + 612 + 148 + 85 = 3260 ✓
-
+// ─── Application Stats ─────────────────────────────────────────────────────
 export const APP_STATS = {
   total:      3_260,
-  completed:  2_415,
+  completed:  TOTAL_COMPLETED_DEEDS, // 2,415
   inProgress:   612,
   rejected:     148,
   syncRetry:     85,
 };
 
-// ─── Blockchain metrics ────────────────────────────────────────────────────
-// Blocks ≈ completed transfers + retry overhead for failed/retried txns.
-// 2415 completed + 203 retry/overhead = 2618 (intentionally above completed, below total apps).
-export const BLOCKCHAIN_BLOCKS = APP_STATS.completed + 203; // 2618
-
-/** % of registered blocks successfully hash-verified (not 100%). */
-export const HASH_VERIFIED_PCT = 99.2;
-
-// ─── Today's registrations ─────────────────────────────────────────────────
-// Pilot-week average ÷ 7, rounded (reflects 15-tehsil pilot volume).
+export const BLOCKCHAIN_BLOCKS = APP_STATS.completed + 203; // 2,618
 export const TODAY_REGISTRATIONS = 38;
-
-// ─── Average processing times ──────────────────────────────────────────────
-export const AVG_MUTATION_DAYS   = 4.8;  // days from application to mutation entry
-export const NODE_UPTIME_PCT     = 98.1; // % node uptime since pilot launch
-
-// ─── Deed type breakdown ───────────────────────────────────────────────────
-// Counts must sum to APP_STATS.completed (2,415).
-
-export const DEED_TYPES = (() => {
-  const raw = [
-    { type: 'Sale Deed',      count: 1_340, color: 'hsl(var(--primary))'     },
-    { type: 'Gift Deed',      count:   456, color: 'hsl(var(--success))'     },
-    { type: 'Mortgage Deed',  count:   302, color: 'hsl(var(--warning))'     },
-    { type: 'Partition Deed', count:   193, color: 'hsl(var(--info))'        },
-    { type: 'Lease / Other',  count:   124, color: 'hsl(var(--destructive))' },
-  ];
-  const total = raw.reduce((s, d) => s + d.count, 0); // must equal 2415
-  return raw.map((d) => ({
-    ...d,
-    pct: parseFloat(((d.count / total) * 100).toFixed(1)),
-  }));
-})();
-// Deed totals: 1340+456+302+193+124 = 2,415 ✓
-
-// ─── District performance rankings ─────────────────────────────────────────
-// Deed counts must sum to APP_STATS.completed (2,415).
-// Revenue = deeds × AVG_STAMP_DUTY_RS (illustrative; not official).
-
-const AVG_STAMP_DUTY_RS = 8_540; // ₹ per registered transfer (illustrative)
-
-export const DISTRICT_RANKINGS = (() => {
-  const rows = [
-    { rank: 1, district: 'Bhopal',   deeds: 680, compliance: 93.6 },
-    { rank: 2, district: 'Indore',   deeds: 612, compliance: 96.8 },
-    { rank: 3, district: 'Jabalpur', deeds: 489, compliance: 91.4 },
-    { rank: 4, district: 'Gwalior',  deeds: 374, compliance: 88.7 },
-    { rank: 5, district: 'Ujjain',   deeds: 260, compliance: 87.9 },
-  ];
-  // Deed totals: 680+612+489+374+260 = 2,415 ✓
-  return rows.map((d) => {
-    const revenueRaw = d.deeds * AVG_STAMP_DUTY_RS;
-    return {
-      ...d,
-      revenueRaw,                                       // in rupees (for chart)
-      revenueL: parseFloat((revenueRaw / 1e5).toFixed(1)), // in Lakh (for display)
-      complianceStr: `${d.compliance}%`,
-    };
-  });
-})();
-
-/** Total stamp revenue across all pilot districts (in rupees). */
-export const TOTAL_REVENUE_RS = DISTRICT_RANKINGS.reduce((s, d) => s + d.revenueRaw, 0);
-// = 20,624,100 ₹ ≈ ₹ 2.1 Cr
-
-// ─── Division stream (dashboard table + chart) ─────────────────────────────
-// Derived by grouping TEHSIL_DATA by district.
-// pendingApps  : sum of tehsil pending counts per district.
-// areaStr      : from DISTRICT_AREA_HA lookup.
-// syncHealth   : fraction of tehsils currently active in that district.
-
-export const DIVISION_STREAM = PILOT_DISTRICTS.map((district) => {
-  const tehsils      = TEHSIL_DATA.filter((t) => t.district === district);
-  const pendingApps  = tehsils.reduce((s, t) => s + t.pending, 0);
-  const areaHa       = DISTRICT_AREA_HA[district];
-  const activeCt     = tehsils.filter((t) => t.status === 'active').length;
-  const totalCt      = tehsils.length;
-  const syncHealth   = `${activeCt} / ${totalCt} Active`;
-  return {
-    region:      `${district} Division`,
-    district,
-    pendingApps,                                        // for chart dataKey
-    areaHa,
-    areaStr:     `${areaHa.toLocaleString('en-IN')} Ha`,
-    syncHealth,
-    allActive:   activeCt === totalCt,
-  };
-});
-// DIVISION_STREAM totals:
-//   pendingApps: 98+84+120+107+106 = 515 (= TEHSIL_DATA pending sum)
-//   areaHa     : 982+847+674+428+269 = 3,200 ✓
-
-// ─── Properties on platform ────────────────────────────────────────────────
-// Total digitised land parcels loaded into the pilot system.
 export const PROPERTIES_ON_PLATFORM = 12_480;
 
-// ─── Disputes ──────────────────────────────────────────────────────────────
-// 12 cases — all filed in 2026 (pilot year), all in MP districts.
-// Resolved cases carry resolutionDays for avg-time computation.
+// ─── Division/District Stream (Dashboard table + chart) ────────────────────
+export const DIVISION_STREAM = PROCESSED_DISTRICTS.map((dist) => {
+  const tehsils = dist.tehsils;
+  const pendingApps = tehsils.reduce((s, t) => s + t.pending, 0);
+  const activeCt = tehsils.filter((t) => t.status === 'active').length;
+  const totalCt = tehsils.length;
+  const syncHealth = `${activeCt} / ${totalCt} Active`;
+  return {
+    region: dist.name, // e.g. "Bhopal District"
+    district: dist.district,
+    slug: dist.slug,
+    pendingApps,
+    areaHa: dist.areaHa,
+    areaStr: `${dist.areaHa.toLocaleString('en-IN')} Ha`,
+    syncHealth,
+    allActive: activeCt === totalCt,
+  };
+});
 
+// ─── Disputes ──────────────────────────────────────────────────────────────
 export const DISPUTES = [
   {
     id: 'DISP-2026-0021', khasra: '104/A', district: 'Bhopal',
@@ -269,9 +539,7 @@ export const DISPUTES = [
     summary: 'Compensation amount disputed for land acquired by cantonment authority in Mhow tehsil.',
   },
 ];
-// Counts: Active 5, Under Review 3, Resolved 4, Total 12.
 
-/** Dispute statistics derived from DISPUTES — header cards must equal these. */
 export const DISPUTE_STATS = (() => {
   const total         = DISPUTES.length;                                           // 12
   const resolvedList  = DISPUTES.filter((d) => d.status === 'Resolved');
@@ -280,7 +548,7 @@ export const DISPUTE_STATS = (() => {
   const underReview   = DISPUTES.filter((d) => d.status === 'Under Review').length; // 3
   const avgDays       = resolvedCount > 0
     ? Math.round(resolvedList.reduce((s, d) => s + (d.resolutionDays || 0), 0) / resolvedCount)
-    : 0; // (32+44+28+41)/4 = 36
+    : 0; // 36
   const resolutionRate = total > 0
     ? parseFloat(((resolvedCount / total) * 100).toFixed(1))
     : 0; // 33.3%
