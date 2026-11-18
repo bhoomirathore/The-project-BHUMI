@@ -13,7 +13,6 @@ const LINKS = [
   { id: '#about', label: 'About' },
   { id: '#features', label: 'Features' },
   { id: '#services', label: 'Services' },
-  { id: '#contact', label: 'Contact' },
 ];
 
 export default function Navbar() {

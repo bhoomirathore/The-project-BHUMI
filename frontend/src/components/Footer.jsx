@@ -10,7 +10,6 @@ const QUICK = [
   { href: '#about', label: 'About Us' },
   { href: '#features', label: 'Features' },
   { href: '#services', label: 'Services' },
-  { href: '#contact', label: 'Contact' },
 ];
 const LEGAL = ['Privacy Policy', 'Terms of Service', 'Compliance', 'Support'];
 

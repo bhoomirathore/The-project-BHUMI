@@ -66,6 +66,7 @@ export default {
           foreground: 'hsl(var(--sidebar-foreground))',
           border: 'hsl(var(--sidebar-border))',
           accent: 'hsl(var(--sidebar-accent))',
+          muted: 'hsl(var(--sidebar-muted))',
         },
       },
       borderRadius: {

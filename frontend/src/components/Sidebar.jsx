@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronsLeft, ChevronsRight, LogOut, Menu, Search, Settings, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
@@ -48,34 +48,33 @@ function initials(name = '') {
 
 function NavItem({ link, collapsed, onNavigate }) {
   const Icon = link.icon;
+  const location = useLocation();
+  const isActive =
+    location.pathname === link.to ||
+    (link.to !== '/' && !link.to.endsWith('/dashboard') && location.pathname.startsWith(link.to + '/'));
+
   const item = (
     <NavLink
       to={link.to}
       onClick={onNavigate}
-      className={({ isActive }) =>
-        cn(
-          'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[0.9rem] font-medium outline-none transition-all duration-200',
-          'focus-visible:ring-2 focus-visible:ring-ring',
-          isActive
-            ? 'bg-primary text-primary-foreground shadow-sm'
-            : 'text-muted-foreground hover:bg-sidebar-accent hover:text-foreground',
-          collapsed && 'justify-center px-0'
-        )
-      }
-    >
-      {({ isActive }) => (
-        <>
-          {isActive && (
-            <motion.span
-              layoutId="sidebar-active-pill"
-              className="absolute inset-0 rounded-lg bg-primary"
-              transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-            />
-          )}
-          <Icon className={cn('relative z-10 h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110')} aria-hidden="true" />
-          {!collapsed && <span className="relative z-10 truncate">{link.label}</span>}
-        </>
+      className={cn(
+        'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[0.9rem] font-medium outline-none transition-all duration-200',
+        'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar',
+        isActive
+          ? 'bg-primary text-primary-foreground shadow-sm'
+          : 'text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground dark:text-slate-300 dark:hover:text-white',
+        collapsed && 'justify-center px-0'
       )}
+    >
+      {isActive && (
+        <motion.span
+          layoutId="sidebar-active-pill"
+          className="absolute inset-0 rounded-lg bg-primary"
+          transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+        />
+      )}
+      <Icon className="relative z-10 h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110" aria-hidden="true" />
+      {!collapsed && <span className="relative z-10 truncate">{link.label}</span>}
     </NavLink>
   );
 
@@ -107,7 +106,13 @@ function SidebarBody({ portal, collapsed, onToggleCollapse, onNavigate, onLogout
         {!collapsed && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={onToggleCollapse} className="hidden h-8 w-8 md:inline-flex" aria-label="Collapse sidebar">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onToggleCollapse}
+                className="hidden h-8 w-8 text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground dark:text-slate-300 dark:hover:text-white md:inline-flex"
+                aria-label="Collapse sidebar"
+              >
                 <ChevronsLeft className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -168,16 +173,26 @@ function SidebarBody({ portal, collapsed, onToggleCollapse, onNavigate, onLogout
         {collapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" className="w-full" onClick={onOpenSearch} aria-label="Search (Ctrl+K)">
+              <Button
+                variant="outline"
+                size="icon"
+                className="w-full border-sidebar-border bg-sidebar text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground dark:text-slate-300 dark:hover:text-white"
+                onClick={onOpenSearch}
+                aria-label="Search (Ctrl+K)"
+              >
                 <Search className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right">Search · Ctrl K</TooltipContent>
           </Tooltip>
         ) : (
-          <Button variant="outline" className="w-full justify-between text-muted-foreground" onClick={onOpenSearch}>
+          <Button
+            variant="outline"
+            className="w-full justify-between border-sidebar-border bg-sidebar text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground dark:text-slate-300 dark:hover:text-white"
+            onClick={onOpenSearch}
+          >
             <span className="flex items-center gap-2"><Search className="h-4 w-4" /> Quick search…</span>
-            <kbd className="pointer-events-none hidden rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:inline-block">⌘K</kbd>
+            <kbd className="pointer-events-none hidden rounded border border-sidebar-border bg-sidebar-accent/50 px-1.5 font-mono text-[10px] font-medium sm:inline-block">⌘K</kbd>
           </Button>
         )}
       </div>
@@ -190,7 +205,7 @@ function SidebarBody({ portal, collapsed, onToggleCollapse, onNavigate, onLogout
               {collapsed ? (
                 <Separator className="my-1 bg-sidebar-border" />
               ) : (
-                <div className="mb-1 px-3 text-[0.66rem] font-bold uppercase tracking-wider text-muted-foreground/80">{sec.label}</div>
+                <div className="mb-1 px-3 text-[0.66rem] font-bold uppercase tracking-wider text-sidebar-muted/80">{sec.label}</div>
               )}
               {sec.links.map((link) => (
                 <NavItem key={link.to} link={link} collapsed={collapsed} onNavigate={onNavigate} />
@@ -202,12 +217,18 @@ function SidebarBody({ portal, collapsed, onToggleCollapse, onNavigate, onLogout
 
       {/* Footer */}
       <div className={cn('flex items-center gap-2 border-t border-sidebar-border p-3', collapsed ? 'flex-col' : 'justify-between')}>
-        <ThemeToggle />
+        <ThemeToggle className="text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground dark:text-slate-300 dark:hover:text-white" />
         {collapsed ? (
           <>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={onToggleCollapse} className="hidden md:inline-flex" aria-label="Expand sidebar">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onToggleCollapse}
+                  className="hidden text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground dark:text-slate-300 dark:hover:text-white md:inline-flex"
+                  aria-label="Expand sidebar"
+                >
                   <ChevronsRight className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
@@ -215,15 +236,26 @@ function SidebarBody({ portal, collapsed, onToggleCollapse, onNavigate, onLogout
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={onLogoutRequest} aria-label="Logout">
-                  <LogOut className="h-4 w-4" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:bg-destructive/15 hover:text-destructive dark:text-[#F87171] dark:hover:text-[#FCA5A5] dark:hover:bg-destructive/15"
+                  onClick={onLogoutRequest}
+                  aria-label="Logout"
+                >
+                  <LogOut className="h-[18px] w-[18px]" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="right">Logout</TooltipContent>
             </Tooltip>
           </>
         ) : (
-          <Button variant="outline" size="sm" className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={onLogoutRequest}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/15 hover:text-destructive dark:text-[#F87171] dark:border-[#F87171]/30 dark:hover:text-[#FCA5A5] dark:hover:bg-destructive/15"
+            onClick={onLogoutRequest}
+          >
             <LogOut className="h-4 w-4" /> Logout
           </Button>
         )}
@@ -274,7 +306,7 @@ export default function Sidebar({ portal = 'citizen', onOpenSearch, mobileOpen, 
 
       {/* Mobile sheet */}
       <Sheet open={isMobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="w-[290px] p-0 [&>button]:z-20">
+        <SheetContent side="left" className="w-[290px] border-r border-sidebar-border bg-sidebar p-0 [&>button]:z-20">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <SheetDescription className="sr-only">Portal navigation menu</SheetDescription>
           <SidebarBody {...bodyProps} collapsed={false} onToggleCollapse={() => {}} onNavigate={() => setMobileOpen(false)} />
@@ -286,7 +318,7 @@ export default function Sidebar({ portal = 'citizen', onOpenSearch, mobileOpen, 
         initial={false}
         animate={{ width: collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH }}
         transition={{ type: 'spring', stiffness: 300, damping: 32 }}
-        className="fixed left-0 top-0 z-40 hidden h-screen border-r border-sidebar-border shadow-[4px_0_30px_hsl(var(--shadow-color)/0.06)] md:block"
+        className="fixed left-0 top-0 z-40 hidden h-screen border-r border-sidebar-border bg-sidebar shadow-[4px_0_30px_hsl(var(--shadow-color)/0.06)] md:block"
       >
         <SidebarBody {...bodyProps} collapsed={collapsed} onToggleCollapse={() => setCollapsed(!collapsed)} onNavigate={undefined} />
       </motion.aside>
