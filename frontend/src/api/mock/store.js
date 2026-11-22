@@ -472,6 +472,7 @@ class MockStore {
     attendee = { type: 'SELF' },
     assistanceNeeded = false,
     notes = '',
+    documents = [],
     userId,
   }) {
     await delay();
@@ -569,6 +570,16 @@ class MockStore {
         reference,
         purpose,
       };
+      if (Array.isArray(documents) && documents.length > 0) {
+        app.documents = documents.map((d) => ({
+          docId: d.docId,
+          type: d.type,
+          fileName: d.fileName,
+          size: d.size ?? d.fileSize ?? 0,
+          mimeType: d.mimeType || 'application/octet-stream',
+          hash: d.hash || '',
+        }));
+      }
     }
 
     const newAppointment = {
@@ -584,6 +595,16 @@ class MockStore {
       attendee,
       assistanceNeeded: Boolean(assistanceNeeded),
       notes: notes || '',
+      documents: Array.isArray(documents)
+        ? documents.map((d) => ({
+            docId: d.docId,
+            type: d.type,
+            fileName: d.fileName,
+            size: d.size ?? d.fileSize ?? 0,
+            mimeType: d.mimeType || 'application/octet-stream',
+            hash: d.hash || '',
+          }))
+        : [],
       status: 'SCHEDULED',
       userId: userId || (app ? app.sellerId : 'usr-citizen-rajesh'),
       createdAt: new Date().toISOString(),

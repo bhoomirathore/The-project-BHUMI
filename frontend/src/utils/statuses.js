@@ -41,6 +41,13 @@ export const DOCUMENT_TYPES = {
   ENCUMBRANCE_CERT: 'ENCUMBRANCE_CERT',
   TAX_RECEIPT: 'TAX_RECEIPT',
   E_REGISTRY: 'E_REGISTRY',
+  AADHAAR: 'AADHAAR',
+  PAN_CARD: 'PAN_CARD',
+  KHASRA_DOC: 'KHASRA_DOC',
+  PROPERTY_IMAGE: 'PROPERTY_IMAGE',
+  BUYER_IMAGE_PROOF: 'BUYER_IMAGE_PROOF',
+  CHATUR_SEEMA: 'CHATUR_SEEMA',
+  WITNESS_DOCS: 'WITNESS_DOCS',
 };
 
 export const DOCUMENT_TYPE_LABELS = {
@@ -50,6 +57,13 @@ export const DOCUMENT_TYPE_LABELS = {
   ENCUMBRANCE_CERT: 'Non-Encumbrance Certificate',
   TAX_RECEIPT: 'Tax Clearance Receipt',
   E_REGISTRY: 'Digital E-Registry Certificate',
+  AADHAAR: 'Aadhaar Card',
+  PAN_CARD: 'PAN Card',
+  KHASRA_DOC: 'Khasra Document (Land Record Extract)',
+  PROPERTY_IMAGE: 'Property Image',
+  BUYER_IMAGE_PROOF: 'Buyer Image Proof',
+  CHATUR_SEEMA: 'Chatur Seema (Boundary Description)',
+  WITNESS_DOCS: 'Witness Documents',
 };
 
 export const USER_ROLES = {

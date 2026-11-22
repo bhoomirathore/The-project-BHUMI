@@ -36,14 +36,17 @@ import {
 import propertyService from '@/services/propertyService';
 import applicationService from '@/services/applicationService';
 import appointmentService from '@/services/appointmentService';
+import documentService from '@/services/documentService';
 import { APPOINTMENT_PURPOSES } from '@/utils/appointmentPurposes';
 
 import PurposeStep from '@/components/appointment/PurposeStep';
 import PropertyStep from '@/components/appointment/PropertyStep';
 import BuyerStep from '@/components/appointment/BuyerStep';
+import TransferDetailsStep from '@/components/appointment/TransferDetailsStep';
 import ApplicationSelectStep from '@/components/appointment/ApplicationSelectStep';
 import QueryDetailsStep from '@/components/appointment/QueryDetailsStep';
 import VisitStep from '@/components/appointment/VisitStep';
+import DocumentsStep, { DOCUMENT_SLOTS } from '@/components/appointment/DocumentsStep';
 import ReviewStep from '@/components/appointment/ReviewStep';
 import BookingSummaryCard from '@/components/appointment/BookingSummaryCard';
 import AppointmentSuccess from '@/components/appointment/AppointmentSuccess';
@@ -111,6 +114,11 @@ export default function BookAppointment() {
     assistanceNeeded: false,
   });
 
+  // Document upload state (keeping raw File objects in memory while wizard is open)
+  const [uploadedDocuments, setUploadedDocuments] = useState({});
+  const [documentUploading, setDocumentUploading] = useState({});
+  const [slotErrors, setSlotErrors] = useState({});
+
   const [confirmed, setConfirmed] = useState(false);
   const [stepError, setStepError] = useState('');
   const [submitError, setSubmitError] = useState('');
@@ -159,14 +167,16 @@ export default function BookAppointment() {
     }
   }, [step]);
 
-  // Define steps according to active purpose
+  // Define steps according to active purpose:
+  // TRANSFER is 5 steps: 1 Purpose, 2 Details, 3 Visit Details, 4 Documents, 5 Review.
+  // Other purposes are 4 steps: 1 Purpose, 2 Details/Application, 3 Visit Details, 4 Review.
   const getSteps = () => {
     if (purpose === APPOINTMENT_PURPOSES.TRANSFER) {
       return [
         { num: 1, label: 'Purpose', icon: ArrowRightLeft },
-        { num: 2, label: 'Property', icon: Landmark },
-        { num: 3, label: 'Buyer', icon: Users },
-        { num: 4, label: 'Visit Details', icon: Calendar },
+        { num: 2, label: 'Details', icon: Landmark },
+        { num: 3, label: 'Visit Details', icon: Calendar },
+        { num: 4, label: 'Documents', icon: FileText },
         { num: 5, label: 'Review', icon: ClipboardCheck },
       ];
     }
@@ -189,6 +199,11 @@ export default function BookAppointment() {
   const currentSteps = getSteps();
   const selectedProperty = properties.find((p) => p.propertyId === selectedPropertyId);
   const selectedApp = applications.find((a) => a.id === selectedApplicationId);
+
+  // Count uploaded document slots for TRANSFER
+  const uploadedDocsCount = DOCUMENT_SLOTS.filter(
+    (slot) => (uploadedDocuments[slot.id] || []).length > 0
+  ).length;
 
   // Change purpose with safety dialog if user entered data
   const handleSelectPurpose = (newP) => {
@@ -222,6 +237,7 @@ export default function BookAppointment() {
       setStepError('');
       setSubmitError('');
       setPendingApplication(null);
+      // NOTE: Per requirement, keep uploaded files in memory even if user changes purpose
     }
     setPurposeChangeOpen(false);
   };
@@ -254,7 +270,50 @@ export default function BookAppointment() {
     }
   };
 
-  // Validation before advancing
+  // Document upload handler: stages file through documentService and keeps File object in memory
+  const handleUploadDocumentFile = async (slotId, file, replaceIndex = -1) => {
+    setDocumentUploading((prev) => ({ ...prev, [slotId]: true }));
+    try {
+      const res = await documentService.uploadDocument(file, slotId);
+      const docRecord = {
+        ...res,
+        file, // Keep raw File object in memory
+      };
+
+      setUploadedDocuments((prev) => {
+        const existing = prev[slotId] || [];
+        if (replaceIndex >= 0 && existing.length > 0) {
+          const updated = [...existing];
+          updated[replaceIndex] = docRecord;
+          return { ...prev, [slotId]: updated };
+        }
+        return {
+          ...prev,
+          [slotId]: [...existing, docRecord],
+        };
+      });
+
+      setSlotErrors((prev) => ({ ...prev, [slotId]: '' }));
+      setStepError('');
+      return docRecord;
+    } finally {
+      setDocumentUploading((prev) => ({ ...prev, [slotId]: false }));
+    }
+  };
+
+  // Document remove handler
+  const handleRemoveDocumentFile = (slotId, docId) => {
+    setUploadedDocuments((prev) => {
+      const existing = prev[slotId] || [];
+      const filtered = existing.filter((d) => d.docId !== docId);
+      return {
+        ...prev,
+        [slotId]: filtered,
+      };
+    });
+  };
+
+  // Validation before advancing to next step
   const handleNext = () => {
     setStepError('');
 
@@ -270,7 +329,7 @@ export default function BookAppointment() {
       return;
     }
 
-    // Step 2 & beyond for TRANSFER
+    // TRANSFER purpose (5 steps)
     if (purpose === APPOINTMENT_PURPOSES.TRANSFER) {
       if (step === 2) {
         if (!selectedPropertyId) {
@@ -281,25 +340,34 @@ export default function BookAppointment() {
           setStepError('The selected property is not active for new transfers.');
           return;
         }
-        goTo(3);
-        return;
-      }
-      if (step === 3) {
         if (!buyerResult) {
           setStepError('Please search and verify the buyer before proceeding.');
           return;
         }
+        goTo(3);
+        return;
+      }
+      if (step === 3) {
+        if (!validateVisit()) return;
         goTo(4);
         return;
       }
       if (step === 4) {
-        if (!validateVisit()) return;
+        const missingSlots = DOCUMENT_SLOTS.filter(
+          (slot) => !(uploadedDocuments[slot.id] && uploadedDocuments[slot.id].length > 0)
+        );
+        if (missingSlots.length > 0) {
+          setStepError(
+            `Please upload all 7 required documents before proceeding. Missing: ${missingSlots.map((s) => s.label).join(', ')}`
+          );
+          return;
+        }
         goTo(5);
         return;
       }
     }
 
-    // Step 2 & beyond for APPLICATION_VISIT
+    // APPLICATION_VISIT purpose (4 steps)
     if (purpose === APPOINTMENT_PURPOSES.APPLICATION_VISIT) {
       if (step === 2) {
         if (!selectedApplicationId) {
@@ -316,7 +384,7 @@ export default function BookAppointment() {
       }
     }
 
-    // Step 2 & beyond for other purposes
+    // Other purposes (4 steps)
     if (step === 2) {
       if (purpose === APPOINTMENT_PURPOSES.OTHER && (!queryDetails.notes.trim() || queryDetails.notes.trim().length < 10)) {
         setStepError('Please provide visit details (minimum 10 characters).');
@@ -374,6 +442,18 @@ export default function BookAppointment() {
 
     try {
       if (purpose === APPOINTMENT_PURPOSES.TRANSFER) {
+        // Flatten documents metadata for submission (excluding the raw File memory handle)
+        const documentsPayload = Object.values(uploadedDocuments)
+          .flat()
+          .map(({ docId, type, fileName, size, fileSize, mimeType, hash }) => ({
+            docId,
+            type,
+            fileName,
+            size: size ?? fileSize ?? 0,
+            mimeType: mimeType || 'application/octet-stream',
+            hash: hash || '',
+          }));
+
         let app = pendingApplication;
 
         // If transfer app wasn't created yet, create it in DRAFT mode
@@ -390,12 +470,12 @@ export default function BookAppointment() {
               name: buyerResult.name,
               phone: buyerResult.phone,
             },
-            documents: [], // DRAFT mode per Amendment 1
+            documents: documentsPayload,
           });
           setPendingApplication(app);
         }
 
-        // Now create appointment linked to application
+        // Create appointment record linked to application and holding document metadata
         const apt = await appointmentService.createAppointment({
           purpose: APPOINTMENT_PURPOSES.TRANSFER,
           applicationId: app.id,
@@ -411,11 +491,12 @@ export default function BookAppointment() {
           },
           assistanceNeeded: visitDetails.assistanceNeeded,
           notes: 'Transfer deed execution booking',
+          documents: documentsPayload,
           userId: user.id,
         });
 
         setCreatedAppointment(apt);
-        toast.success('Appointment scheduled and draft transfer application created.');
+        toast.success('Appointment scheduled and transfer application created.');
       } else {
         // Non-transfer purposes
         const apt = await appointmentService.createAppointment({
@@ -433,6 +514,7 @@ export default function BookAppointment() {
           },
           assistanceNeeded: visitDetails.assistanceNeeded,
           notes: queryDetails.notes || otherNote || '',
+          documents: [],
           userId: user.id,
         });
 
@@ -458,6 +540,9 @@ export default function BookAppointment() {
     setBuyerQuery('');
     setOtherNote('');
     setQueryDetails({ propertyId: '', notes: '' });
+    setUploadedDocuments({});
+    setDocumentUploading({});
+    setSlotErrors({});
     setPendingApplication(null);
     setCreatedAppointment(null);
     setConfirmed(false);
@@ -509,7 +594,9 @@ export default function BookAppointment() {
                     {submitError}
                     {pendingApplication && (
                       <div className="mt-2">
-                        <span>Application <strong>{pendingApplication.id}</strong> has been initialized. You can retry booking the appointment below without creating a second application.</span>
+                        <span>
+                          Application <strong>{pendingApplication.id}</strong> has been initialized. You can retry booking the appointment below without creating a second application.
+                        </span>
                       </div>
                     )}
                   </AlertDescription>
@@ -540,9 +627,10 @@ export default function BookAppointment() {
                   </motion.div>
                 )}
 
+                {/* Step 2 for TRANSFER: Transfer Details (Property & Buyer) */}
                 {step === 2 && purpose === APPOINTMENT_PURPOSES.TRANSFER && (
                   <motion.div
-                    key="step-2-prop"
+                    key="step-2-transfer"
                     custom={direction}
                     variants={slide}
                     initial="enter"
@@ -550,15 +638,22 @@ export default function BookAppointment() {
                     exit="exit"
                     transition={{ duration: 0.25 }}
                   >
-                    <PropertyStep
+                    <TransferDetailsStep
                       properties={properties}
                       selectedPropertyId={selectedPropertyId}
                       onSelectProperty={setSelectedPropertyId}
+                      buyerQuery={buyerQuery}
+                      onChangeBuyerQuery={setBuyerQuery}
+                      onSearchBuyer={handleSearchBuyer}
+                      buyerSearching={buyerSearching}
+                      buyerResult={buyerResult}
+                      buyerError={buyerError}
                       error={stepError}
                     />
                   </motion.div>
                 )}
 
+                {/* Step 2 for APPLICATION_VISIT: Application Select */}
                 {step === 2 && purpose === APPOINTMENT_PURPOSES.APPLICATION_VISIT && (
                   <motion.div
                     key="step-2-app"
@@ -578,6 +673,7 @@ export default function BookAppointment() {
                   </motion.div>
                 )}
 
+                {/* Step 2 for Query/Other */}
                 {step === 2 &&
                   purpose !== APPOINTMENT_PURPOSES.TRANSFER &&
                   purpose !== APPOINTMENT_PURPOSES.APPLICATION_VISIT && (
@@ -602,30 +698,8 @@ export default function BookAppointment() {
                     </motion.div>
                   )}
 
-                {step === 3 && purpose === APPOINTMENT_PURPOSES.TRANSFER && (
-                  <motion.div
-                    key="step-3-buyer"
-                    custom={direction}
-                    variants={slide}
-                    initial="enter"
-                    animate="center"
-                    exit="exit"
-                    transition={{ duration: 0.25 }}
-                  >
-                    <BuyerStep
-                      buyerQuery={buyerQuery}
-                      onChangeBuyerQuery={setBuyerQuery}
-                      onSearchBuyer={handleSearchBuyer}
-                      buyerSearching={buyerSearching}
-                      buyerResult={buyerResult}
-                      buyerError={buyerError}
-                      error={stepError}
-                    />
-                  </motion.div>
-                )}
-
-                {((step === 4 && purpose === APPOINTMENT_PURPOSES.TRANSFER) ||
-                  (step === 3 && purpose !== APPOINTMENT_PURPOSES.TRANSFER)) && (
+                {/* Step 3: Visit Details (for all purposes) */}
+                {step === 3 && (
                   <motion.div
                     key="step-visit"
                     custom={direction}
@@ -645,6 +719,30 @@ export default function BookAppointment() {
                   </motion.div>
                 )}
 
+                {/* Step 4 for TRANSFER ONLY: Documents Upload */}
+                {step === 4 && purpose === APPOINTMENT_PURPOSES.TRANSFER && (
+                  <motion.div
+                    key="step-documents"
+                    custom={direction}
+                    variants={slide}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ duration: 0.25 }}
+                  >
+                    <DocumentsStep
+                      documents={uploadedDocuments}
+                      onUploadFile={handleUploadDocumentFile}
+                      onRemoveFile={handleRemoveDocumentFile}
+                      uploading={documentUploading}
+                      slotErrors={slotErrors}
+                      setSlotErrors={setSlotErrors}
+                      error={stepError}
+                    />
+                  </motion.div>
+                )}
+
+                {/* Review Step: Step 5 for TRANSFER, Step 4 for other purposes */}
                 {((step === 5 && purpose === APPOINTMENT_PURPOSES.TRANSFER) ||
                   (step === 4 && purpose !== APPOINTMENT_PURPOSES.TRANSFER)) && (
                   <motion.div
@@ -663,6 +761,7 @@ export default function BookAppointment() {
                       application={selectedApp || pendingApplication}
                       queryDetails={queryDetails}
                       visitDetails={visitDetails}
+                      documents={uploadedDocuments}
                       onEditStep={(s) => goTo(s)}
                       onConfirmSubmit={handleConfirmSubmit}
                       submitting={submitting}
@@ -713,6 +812,7 @@ export default function BookAppointment() {
             buyer={buyerResult}
             application={selectedApp || pendingApplication}
             visitDetails={visitDetails}
+            documentsCount={uploadedDocsCount}
             className="sticky top-20"
           />
         </div>

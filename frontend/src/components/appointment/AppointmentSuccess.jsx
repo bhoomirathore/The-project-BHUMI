@@ -98,12 +98,22 @@ export default function AppointmentSuccess({
           </div>
 
           {/* Notice for Transfer Draft */}
-          {isTransfer && (
+          {isTransfer && (!appointment?.documents || appointment.documents.length === 0) && (
             <Alert className="mt-4 text-left border-warning/40 bg-warning/10 text-warning-foreground">
               <FileText className="h-4 w-4 text-warning" />
               <AlertTitle className="font-bold text-xs">Action Required: Upload Documents</AlertTitle>
               <AlertDescription className="text-xs mt-1">
-                Your application is a draft until you upload and submit all 5 required documents. Please do this before your visit.
+                Your application is a draft until you upload and submit all required documents. Please do this before your visit.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {isTransfer && appointment?.documents?.length > 0 && (
+            <Alert className="mt-4 text-left border-success/40 bg-success/10 text-success-foreground">
+              <FileText className="h-4 w-4 text-success" />
+              <AlertTitle className="font-bold text-xs">Documents Attached</AlertTitle>
+              <AlertDescription className="text-xs mt-1">
+                All 7 required documents have been uploaded and attached to your appointment record for verification.
               </AlertDescription>
             </Alert>
           )}
@@ -122,11 +132,11 @@ export default function AppointmentSuccess({
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             {isTransfer ? (
               <Button
-                onClick={() => navigate(`/citizen/applications/${application.id}#documents`)}
+                onClick={() => navigate(`/citizen/applications/${application.id}`)}
                 className="gap-2 font-bold px-6"
               >
-                <UploadCloud className="h-4 w-4" />
-                Upload Documents
+                <FileText className="h-4 w-4" />
+                View Application
                 <ArrowRight className="h-4 w-4" />
               </Button>
             ) : null}

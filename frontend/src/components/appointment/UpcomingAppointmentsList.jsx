@@ -1,8 +1,8 @@
 import React from 'react';
-import { Calendar, Clock, MapPin, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, AlertCircle, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { APPOINTMENT_PURPOSE_LABELS } from '@/utils/appointmentPurposes';
+import { APPOINTMENT_PURPOSES, APPOINTMENT_PURPOSE_LABELS } from '@/utils/appointmentPurposes';
 
 export default function UpcomingAppointmentsList({ appointments = [] }) {
   if (!appointments || appointments.length === 0) return null;
@@ -44,6 +44,14 @@ export default function UpcomingAppointmentsList({ appointments = [] }) {
                   </span>
                 </div>
               </div>
+              {apt.purpose === APPOINTMENT_PURPOSES.TRANSFER && (
+                <div className="mt-2 flex items-center">
+                  <Badge variant="secondary" className="text-[10px] font-medium gap-1 px-1.5 py-0.5">
+                    <FileText className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
+                    7 documents
+                  </Badge>
+                </div>
+              )}
               {apt.isDraft && (
                 <div className="mt-2 flex items-center gap-1 rounded bg-warning/15 px-2 py-1 text-[11px] font-medium text-warning-foreground border border-warning/30">
                   <AlertCircle className="h-3 w-3 shrink-0 text-warning" aria-hidden="true" />

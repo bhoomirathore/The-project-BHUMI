@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, MapPin, ChevronDown, ChevronUp, FileCheck2, User, Landmark, ClipboardList } from 'lucide-react';
+import { Calendar, Clock, MapPin, ChevronDown, ChevronUp, FileCheck2, User, Landmark, ClipboardList, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import {
   APPOINTMENT_PURPOSES,
   APPOINTMENT_PURPOSE_LABELS,
@@ -17,6 +18,7 @@ export default function BookingSummaryCard({
   buyer,
   application,
   visitDetails,
+  documentsCount = 0,
   className,
 }) {
   const [mobileExpanded, setMobileExpanded] = useState(false);
@@ -109,6 +111,21 @@ export default function BookingSummaryCard({
           )}
         </div>
       </div>
+
+      {purpose === APPOINTMENT_PURPOSES.TRANSFER && (
+        <div className="border-t border-border/60 pt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+              <FileText className="h-3 w-3 text-primary" aria-hidden="true" />
+              Documents Upload
+            </span>
+            <span className="font-mono text-xs font-bold text-foreground">
+              {documentsCount} of 7 uploaded
+            </span>
+          </div>
+          <Progress value={Math.round((documentsCount / 7) * 100)} className="mt-1.5 h-1.5" />
+        </div>
+      )}
 
       <div className="border-t border-border/60 pt-3">
         <div className="flex items-center gap-1.5 font-bold text-foreground">
