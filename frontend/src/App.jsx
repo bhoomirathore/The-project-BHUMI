@@ -7,6 +7,8 @@ import LandingPage from './pages/LandingPage';
 import PublicVerify from './pages/PublicVerify';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
 
 import CitizenDashboard from './pages/citizen/Dashboard';
 import CitizenProperties from './pages/citizen/Properties';
@@ -58,6 +60,12 @@ export default function App() {
 
           <Route path="/auth/register" element={<Register />} />
           <Route path="/register" element={<Navigate to="/auth/register" replace />} />
+
+          <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+          <Route path="/forgot-password" element={<Navigate to="/auth/forgot-password" replace />} />
+
+          <Route path="/auth/reset-password" element={<ResetPassword />} />
+          <Route path="/reset-password" element={<Navigate to="/auth/reset-password" replace />} />
 
           {/* Citizen Portal Routes (Protected: CITIZEN) */}
           <Route

@@ -17,9 +17,9 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { isMockMode } from '../../api/client';
 import BrandLogo from '@/components/common/BrandLogo';
 import ThemeToggle from '@/components/common/ThemeToggle';
+import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import { staggerContainer, staggerItem } from '@/components/common/Reveal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,13 +35,13 @@ const TRUST_POINTS = [
   { icon: FileCheck, title: 'Verified e-Registry', text: 'Download certificates that anyone can independently verify.' },
 ];
 
-// Mock login only matches on email; any password is accepted.
+// Pre-seeded accounts (hashed with bcrypt Demo1234!)
 const DEMO_ACCOUNTS = [
   { role: 'Citizen', email: 'rajesh.singh@example.com', icon: User },
   { role: 'Registrar', email: 'ramesh.sharma@example.com', icon: Landmark },
   { role: 'HQ', email: 'mukesh.kumar@example.com', icon: Building2 },
 ];
-const DEMO_PASSWORD = 'demo1234';
+const DEMO_PASSWORD = 'Demo1234!';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -51,7 +51,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -59,7 +59,8 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const user = await login(email, password);
+      const user = await login(email.trim(), password);
+      toast.success('Signed in successfully', { description: `Welcome back, ${user.name}!` });
       if (user.role === 'CITIZEN') {
         navigate('/citizen/dashboard');
       } else if (user.role === 'REGISTRAR') {
@@ -76,11 +77,33 @@ export default function Login() {
     }
   };
 
+  const handleGoogleSuccess = async (credential) => {
+    setError('');
+    setLoading(true);
+    try {
+      const user = await googleLogin(credential);
+      toast.success('Signed in with Google', { description: `Welcome, ${user.name}!` });
+      if (user.role === 'CITIZEN') {
+        navigate('/citizen/dashboard');
+      } else if (user.role === 'REGISTRAR') {
+        navigate('/authority/dashboard');
+      } else if (user.role === 'GOVERNMENT_HQ') {
+        navigate('/government/dashboard');
+      } else {
+        navigate('/');
+      }
+    } catch (err) {
+      setError(err.message || 'Google sign-in failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fillDemo = (acct) => {
     setEmail(acct.email);
     setPassword(DEMO_PASSWORD);
     setError('');
-    toast.info(`${acct.role} demo credentials filled`, { description: acct.email });
+    toast.info(`${acct.role} credentials loaded`, { description: acct.email });
   };
 
   return (
@@ -101,7 +124,7 @@ export default function Login() {
               Digital Land Registry System
             </h1>
             <p className="mb-10 text-lg text-muted-foreground">
-              Securing land rights through blockchain technology
+              Securing land rights through blockchain technology &amp; cryptographic identity
             </p>
 
             <motion.ul
@@ -139,7 +162,7 @@ export default function Login() {
             <Card className="shadow-card">
               <CardHeader className="items-center text-center">
                 <CardTitle className="text-2xl font-extrabold sm:text-3xl">Welcome Back</CardTitle>
-                <CardDescription>Sign in to access your account</CardDescription>
+                <CardDescription>Sign in to access your secure land records</CardDescription>
               </CardHeader>
               <CardContent>
                 {error && (
@@ -148,6 +171,23 @@ export default function Login() {
                     <AlertDescription className="text-xs font-semibold">{error}</AlertDescription>
                   </Alert>
                 )}
+
+                {/* Google Sign-In */}
+                <div className="mb-5">
+                  <GoogleSignInButton
+                    onCredentialResponse={handleGoogleSuccess}
+                    text="Sign in with Google"
+                    disabled={loading}
+                  />
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-border" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground font-semibold">Or sign in with email</span>
+                    </div>
+                  </div>
+                </div>
 
                 <form onSubmit={handleLogin} className="flex flex-col gap-4 sm:gap-5">
                   <div className="flex flex-col gap-1.5">
@@ -165,7 +205,15 @@ export default function Login() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="password">Password</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Password</Label>
+                      <Link
+                        to="/auth/forgot-password"
+                        className="text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                      >
+                        Forgot password?
+                      </Link>
+                    </div>
                     <div className="relative">
                       <Input
                         type={showPassword ? 'text' : 'password'}
@@ -220,43 +268,44 @@ export default function Login() {
                   </div>
                 </form>
 
-                {isMockMode() && (
-                  <div className="mt-5 rounded-lg border bg-muted/30 p-3">
-                    <div className="mb-2 text-[0.72rem] font-bold uppercase tracking-wider text-muted-foreground">
-                      Demo Accounts
-                    </div>
-                    <ul className="flex flex-col gap-1">
-                      {DEMO_ACCOUNTS.map((acct) => {
-                        const Icon = acct.icon;
-                        return (
-                          <li key={acct.email}>
-                            <button
-                              type="button"
-                              onClick={() => fillDemo(acct)}
-                              className="group flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                            >
-                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                                <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-                              </span>
-                              <span className="w-16 shrink-0 font-semibold">{acct.role}</span>
-                              <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground group-hover:text-foreground">
-                                {acct.email}
-                              </span>
-                              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true" />
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    <p className="mt-2 text-[0.68rem] text-muted-foreground">Click a row to fill the form. Any password works in demo mode.</p>
+                {/* Pre-configured Demo Accounts for easy testing */}
+                <div className="mt-5 rounded-lg border bg-muted/30 p-3">
+                  <div className="mb-2 text-[0.72rem] font-bold uppercase tracking-wider text-muted-foreground">
+                    Available Test Accounts (Verified bcrypt authentication)
                   </div>
-                )}
+                  <ul className="flex flex-col gap-1">
+                    {DEMO_ACCOUNTS.map((acct) => {
+                      const Icon = acct.icon;
+                      return (
+                        <li key={acct.email}>
+                          <button
+                            type="button"
+                            onClick={() => fillDemo(acct)}
+                            className="group flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                          >
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                            </span>
+                            <span className="w-16 shrink-0 font-semibold">{acct.role}</span>
+                            <span className="min-w-0 flex-1 truncate font-mono text-muted-foreground group-hover:text-foreground">
+                              {acct.email}
+                            </span>
+                            <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true" />
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <p className="mt-2 text-[0.68rem] text-muted-foreground">
+                    Click a row to autofill verified test credentials. Each sign-in issues a cryptographic JWT session.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </motion.div>
 
           <div className="mt-5 text-center text-xs text-muted-foreground">
-            B.H.U.M.I. prototype (not an official government service)
+            B.H.U.M.I. Secure Land Registry Portal
           </div>
         </div>
       </div>
