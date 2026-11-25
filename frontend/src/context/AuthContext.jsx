@@ -1,77 +1,57 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import authService from '../services/authService';
-import { getAuthToken, clearAuthSession } from '../api/client';
+import React, { createContext, useContext, useState, useMemo } from 'react';
 
 const AuthContext = createContext(null);
 
+export const DEFAULT_PROFILES = {
+  citizen: {
+    id: 'usr-citizen-rajesh',
+    name: 'Rajesh Kumar Singh',
+    email: 'rajesh.singh@example.com',
+    phone: '9876543210',
+    role: 'CITIZEN',
+    avatar: 'RS',
+  },
+  authority: {
+    id: 'usr-registrar-ramesh',
+    name: 'Ramesh Sharma',
+    email: 'ramesh.sharma@example.com',
+    phone: '9876543211',
+    role: 'REGISTRAR',
+    avatar: 'RS',
+    badge: 'REGISTRAR',
+  },
+  government: {
+    id: 'usr-hq-mukesh',
+    name: 'Mukesh Kumar',
+    email: 'mukesh.kumar@example.com',
+    phone: '9876543212',
+    role: 'GOVERNMENT_HQ',
+    avatar: 'MK',
+    badge: 'GOV HQ',
+  },
+};
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [activePortal, setActivePortal] = useState('citizen');
 
-  // Initialize and verify session against backend
-  const verifySession = useCallback(async () => {
-    const token = getAuthToken();
-    if (!token) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const verifiedUser = await authService.getMe();
-      if (verifiedUser) {
-        setUser(verifiedUser);
-      } else {
-        setUser(null);
-      }
-    } catch (err) {
-      console.warn('Session verification failed:', err.message);
-      clearAuthSession();
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    verifySession();
-
-    const handleUnauthorized = () => {
-      setUser(null);
-    };
-
-    window.addEventListener('bhumi:auth:unauthorized', handleUnauthorized);
-    return () => {
-      window.removeEventListener('bhumi:auth:unauthorized', handleUnauthorized);
-    };
-  }, [verifySession]);
-
-  const login = async (email, password) => {
-    const loggedInUser = await authService.login(email, password);
-    setUser(loggedInUser);
-    return loggedInUser;
-  };
-
-  const googleLogin = async (credential) => {
-    const loggedInUser = await authService.googleLogin(credential);
-    setUser(loggedInUser);
-    return loggedInUser;
-  };
-
-  const logout = async () => {
-    await authService.logout();
-    setUser(null);
-  };
+  // Derive user profile based on active portal
+  const user = useMemo(() => {
+    return DEFAULT_PROFILES[activePortal] || DEFAULT_PROFILES.citizen;
+  }, [activePortal]);
 
   const value = {
     user,
-    role: user?.role || null,
-    isAuthenticated: !!user,
-    loading,
-    login,
-    googleLogin,
-    logout,
-    refreshSession: verifySession,
+    role: user.role,
+    isAuthenticated: true,
+    loading: false,
+    activePortal,
+    setActivePortal,
+    // Portal switch helper
+    switchProfile: (portalKey) => {
+      if (DEFAULT_PROFILES[portalKey]) {
+        setActivePortal(portalKey);
+      }
+    },
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Moon, Sun, Home, SearchCheck } from 'lucide-react';
+import { Moon, Sun, Home, SearchCheck } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import {
   CommandDialog,
@@ -10,7 +10,6 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-  CommandShortcut,
 } from '@/components/ui/command';
 import { PORTAL_NAV, portalForRole } from '@/config/navigation';
 import { useAuth } from '../../hooks/useAuth';
@@ -18,10 +17,10 @@ import { useAuth } from '../../hooks/useAuth';
 /**
  * Global Ctrl/Cmd+K palette for jumping between portal pages.
  */
-export default function CommandPalette({ open, onOpenChange, portal: portalProp = 'citizen', onLogout }) {
+export default function CommandPalette({ open, onOpenChange, portal: portalProp = 'citizen' }) {
   const navigate = useNavigate();
   const { setTheme, resolvedTheme } = useTheme();
-  const { logout, user } = useAuth();
+  const { user } = useAuth();
   // Always search only the current role's nav entries.
   const portal = user?.role ? portalForRole(user.role) : portalProp;
   const sections = PORTAL_NAV[portal] || PORTAL_NAV.citizen;
@@ -67,10 +66,6 @@ export default function CommandPalette({ open, onOpenChange, portal: portalProp 
           <CommandItem value="toggle theme dark light" onSelect={() => run(() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark'))}>
             {resolvedTheme === 'dark' ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
             Toggle {resolvedTheme === 'dark' ? 'light' : 'dark'} mode
-          </CommandItem>
-          <CommandItem value="logout sign out" onSelect={() => run(() => { if (onLogout) onLogout(); else { logout(); navigate('/auth/login'); } })}>
-            <LogOut className="mr-2 h-4 w-4" /> Sign out
-            <CommandShortcut>⇧⌘Q</CommandShortcut>
           </CommandItem>
         </CommandGroup>
       </CommandList>

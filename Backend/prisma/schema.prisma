@@ -17,41 +17,13 @@ enum Role {
 }
 
 model User {
-  id                 String               @id @default(uuid())
-  name               String
-  email              String               @unique
-  phone              String?
-  password           String?              // Nullable for OAuth-only users
-  googleId           String?              @unique
-  role               Role                 @default(CITIZEN)
-  avatar             String?
-  isVerified         Boolean              @default(true)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  refreshTokens      RefreshToken[]
-  passwordResetTokens PasswordResetToken[]
-}
-
-model RefreshToken {
-  id        String   @id @default(uuid())
-  token     String   @unique // Hashed (SHA-256) refresh token
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  revoked   Boolean  @default(false)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-}
-
-model PasswordResetToken {
-  id        String   @id @default(uuid())
-  token     String   @unique // Hashed (SHA-256) reset token
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  used      Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  @@index([userId])
+  id         String   @id @default(uuid())
+  name       String
+  email      String   @unique
+  phone      String?
+  role       Role     @default(CITIZEN)
+  avatar     String?
+  isVerified Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
