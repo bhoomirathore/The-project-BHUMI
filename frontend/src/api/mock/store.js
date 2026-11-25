@@ -83,6 +83,50 @@ class MockStore {
     });
   }
 
+  // --- AUTH ---
+  async login(email, password) {
+    await delay();
+    const user = this.users.find(
+      (u) => u.email.toLowerCase() === (email || '').trim().toLowerCase()
+    );
+    if (!user) {
+      const err = new Error('Invalid email or password.');
+      err.status = 401;
+      throw err;
+    }
+    // Return user with token
+    return deepClone(user);
+  }
+
+  async register({ name, email, phone, password }) {
+    await delay();
+    const existing = this.users.find(
+      (u) => u.email.toLowerCase() === (email || '').trim().toLowerCase()
+    );
+    if (existing) {
+      const err = new Error('An account with this email already exists.');
+      err.status = 409;
+      throw err;
+    }
+    const newUser = {
+      id: `usr-${Date.now()}`,
+      name,
+      email,
+      phone,
+      role: 'CITIZEN',
+      avatar: name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase(),
+      kycStatus: 'PENDING',
+      token: `mock-token-${Date.now()}`,
+    };
+    this.users.push(newUser);
+    return deepClone(newUser);
+  }
+
   // --- BUYER LOOKUP ---
   async lookupBuyer(query, currentUserId) {
     await delay();

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, Lock, AlertCircle, X, SearchX, ArrowRight } from 'lucide-react';
+import { Search, Lock, AlertCircle, X, SearchX, LogIn, ArrowRight } from 'lucide-react';
 import VerifyLandForm from '../components/VerifyLandForm';
 import VerifyLandResult from '../components/VerifyLandResult';
 import publicService from '../services/publicService';
@@ -54,8 +54,9 @@ export default function PublicVerify() {
           <BrandLogo size="sm" subtitle="Public Verify" />
           <div className="flex items-center gap-2">
             <Button asChild variant="outline" size="sm">
-              <Link to="/citizen/dashboard">
-                Citizen Portal
+              <Link to="/auth/login">
+                <LogIn />
+                Sign in
               </Link>
             </Button>
             <ThemeToggle />
@@ -93,8 +94,8 @@ export default function PublicVerify() {
               Personal information (owner name, contact, identity documents) is not disclosed on this
               public page in compliance with applicable data protection obligations. To view masked
               owner details, please{' '}
-              <Link to="/citizen/dashboard" className="font-semibold text-foreground underline underline-offset-2 hover:opacity-75">
-                visit the Citizen Portal
+              <Link to="/auth/login" className="font-semibold text-foreground underline underline-offset-2 hover:opacity-75">
+                sign in as a registered citizen
               </Link>
               .
             </AlertDescription>
@@ -172,8 +173,8 @@ export default function PublicVerify() {
                 </p>
               </div>
               <Button asChild className="shrink-0 font-bold">
-                <Link to="/citizen/dashboard">
-                  Citizen Portal
+                <Link to="/auth/login">
+                  Sign In
                   <ArrowRight />
                 </Link>
               </Button>

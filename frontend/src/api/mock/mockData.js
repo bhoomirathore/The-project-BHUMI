@@ -14,6 +14,7 @@ export const INITIAL_USERS = [
     role: 'CITIZEN',
     avatar: 'RS',
     kycStatus: 'VERIFIED',
+    token: 'mock-token-citizen-rajesh',
   },
   {
     id: 'usr-citizen-suresh',
@@ -23,6 +24,7 @@ export const INITIAL_USERS = [
     role: 'CITIZEN',
     avatar: 'SS',
     kycStatus: 'VERIFIED',
+    token: 'mock-token-citizen-suresh',
   },
   {
     id: 'usr-registrar-ramesh',
@@ -32,6 +34,7 @@ export const INITIAL_USERS = [
     role: 'REGISTRAR',
     avatar: 'RS',
     badge: 'REGISTRAR',
+    token: 'mock-token-registrar-ramesh',
   },
   {
     id: 'usr-hq-mukesh',
@@ -41,6 +44,7 @@ export const INITIAL_USERS = [
     role: 'GOVERNMENT_HQ',
     avatar: 'MK',
     badge: 'GOV HQ',
+    token: 'mock-token-hq-mukesh',
   },
 ];
 

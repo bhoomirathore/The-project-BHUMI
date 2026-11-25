@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../../hooks/useAuth';
+import authService from '../../services/authService';
 import propertyService from '../../services/propertyService';
 import applicationService from '../../services/applicationService';
 import appointmentService from '../../services/appointmentService';
@@ -63,7 +64,7 @@ const ABOUT_STORAGE_KEY = 'bhumi_dashboard_about_open';
 
 export default function CitizenDashboard() {
   const { user, loading: authLoading } = useAuth();
-  const activeUser = user || { id: 'usr-citizen-rajesh', name: 'Rajesh Kumar Singh', role: 'CITIZEN' };
+  const activeUser = user || authService.getCurrentUser();
   const navigate = useNavigate();
   const shouldReduceMotion = useReducedMotion();
 
@@ -129,7 +130,7 @@ export default function CitizenDashboard() {
   };
 
   useEffect(() => {
-    const currentUserId = user?.id || 'usr-citizen-rajesh';
+    const currentUserId = user?.id || authService.getCurrentUser()?.id;
     if (currentUserId) {
       loadProperties(currentUserId);
       loadDashboardData(currentUserId);
@@ -140,7 +141,7 @@ export default function CitizenDashboard() {
   }, [user?.id, authLoading]);
 
   const handleRetryProperties = () => {
-    const currentUserId = user?.id || 'usr-citizen-rajesh';
+    const currentUserId = user?.id || authService.getCurrentUser()?.id;
     if (currentUserId) {
       loadProperties(currentUserId);
     }

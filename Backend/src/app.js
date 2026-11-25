@@ -1,7 +1,10 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
+const cookieParser = require("cookie-parser");
 const prisma = require("./config/db");
+const authRoutes = require("./routes/auth.routes");
+const { authenticateToken, requireRole } = require("./middleware/auth.middleware");
 
 const app = express();
 
@@ -24,6 +27,7 @@ app.use(
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(cookieParser());
 
 // ── Health Check ──────────────────────────────────────────────────────────────
 app.get("/api/health", async (req, res) => {
@@ -43,17 +47,20 @@ app.get("/api/health", async (req, res) => {
   }
 });
 
-// ── Portal Status Endpoints ───────────────────────────────────────────────────
-app.get("/api/citizen/status", (req, res) => {
-  res.json({ status: "success", portal: "CITIZEN", message: "Citizen portal active" });
+// ── API Routes ────────────────────────────────────────────────────────────────
+app.use("/api/auth", authRoutes);
+
+// Example protected routes to demonstrate secure role-based access control
+app.get("/api/citizen/protected-test", authenticateToken, requireRole("CITIZEN"), (req, res) => {
+  res.json({ status: "success", message: "Accessed Citizen protected route", user: req.user });
 });
 
-app.get("/api/authority/status", (req, res) => {
-  res.json({ status: "success", portal: "REGISTRAR", message: "Registrar portal active" });
+app.get("/api/authority/protected-test", authenticateToken, requireRole("REGISTRAR"), (req, res) => {
+  res.json({ status: "success", message: "Accessed Registrar protected route", user: req.user });
 });
 
-app.get("/api/government/status", (req, res) => {
-  res.json({ status: "success", portal: "GOVERNMENT_HQ", message: "Government HQ portal active" });
+app.get("/api/government/protected-test", authenticateToken, requireRole("GOVERNMENT_HQ"), (req, res) => {
+  res.json({ status: "success", message: "Accessed Government HQ protected route", user: req.user });
 });
 
 // ── Global 404 & Error Handling ───────────────────────────────────────────────
