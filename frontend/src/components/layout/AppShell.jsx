@@ -13,8 +13,8 @@ import { portalForRole } from '@/config/navigation';
  */
 export default function AppShell({ portal: portalProp = 'citizen', children, className, contentClassName }) {
   const { user } = useAuth();
-  // Derive the portal key from the page's portalProp or fall back to user role.
-  const portal = portalProp || (user?.role ? portalForRole(user.role) : 'citizen');
+  // Derive the portal key from the authenticated role; fall back to the prop.
+  const portal = user?.role ? portalForRole(user.role) : portalProp;
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem('bhumi-sidebar-collapsed') === '1'; } catch { return false; }

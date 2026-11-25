@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ChevronsLeft, ChevronsRight, Home, Menu, Search, Settings, UserRound } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronsLeft, ChevronsRight, LogOut, Menu, Search, Settings, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../hooks/useAuth';
 import { PORTAL_META, PORTAL_NAV, portalForRole } from '@/config/navigation';
@@ -20,6 +20,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import BrandLogo from '@/components/common/BrandLogo';
 import RoleBadge from '@/components/RoleBadge';
 import ThemeToggle from '@/components/common/ThemeToggle';
@@ -85,17 +95,19 @@ const ROLE_LABEL = {
   GOVERNMENT_HQ: 'Government HQ',
 };
 
-function SidebarBody({ portal: portalProp, collapsed, onToggleCollapse, onNavigate, onOpenSearch }) {
+function SidebarBody({ portal: portalProp, collapsed, onToggleCollapse, onNavigate, onLogoutRequest, onOpenSearch }) {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const portal = portalProp || (user?.role ? portalForRole(user.role) : 'citizen');
+  // Always derive the active portal from the logged-in user's role so the sidebar
+  // matches the actual session even when the page forgets to pass the prop.
+  const portal = user?.role ? portalForRole(user.role) : (portalProp || 'citizen');
   const meta = PORTAL_META[portal] || PORTAL_META.citizen;
   const sections = PORTAL_NAV[portal] || PORTAL_NAV.citizen;
 
-  const displayName = meta.name;
-  const displayAvatar = meta.avatar;
-  const displayRole = meta.role;
-  const displayBadge = meta.badge;
+  const displayName = user?.name || meta.name;
+  const displayAvatar = user?.avatar || (user?.name ? initials(user.name) : meta.avatar);
+  const displayRole = (user?.role && ROLE_LABEL[user.role]) || meta.role;
+  const displayBadge = user?.role || meta.badge;
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
@@ -120,7 +132,7 @@ function SidebarBody({ portal: portalProp, collapsed, onToggleCollapse, onNaviga
         )}
       </div>
 
-      {/* User / Portal card */}
+      {/* User card */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
@@ -129,7 +141,7 @@ function SidebarBody({ portal: portalProp, collapsed, onToggleCollapse, onNaviga
               'flex w-full items-center gap-3 border-b border-sidebar-border bg-muted/30 p-3 text-left outline-none transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
               collapsed && 'justify-center'
             )}
-            aria-label="Account and portal menu"
+            aria-label="Account menu"
           >
             <Avatar className="h-10 w-10 shadow-sm ring-2 ring-background">
               <AvatarFallback className="bg-gradient-to-br from-primary to-muted-foreground font-bold text-primary-foreground">
@@ -148,24 +160,21 @@ function SidebarBody({ portal: portalProp, collapsed, onToggleCollapse, onNaviga
         <DropdownMenuContent align="start" side="right" sideOffset={8} className="w-56">
           <DropdownMenuLabel className="font-normal">
             <div className="text-sm font-bold">{displayName}</div>
-            <div className="text-xs text-muted-foreground">{displayRole}</div>
+            <div className="text-xs text-muted-foreground">{user?.email || displayRole}</div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => toast.info('Profile settings are not available in this prototype.')}>
+            <UserRound className="mr-2 h-4 w-4" /> Profile
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => toast.info('Settings are not available in this prototype.')}>
+            <Settings className="mr-2 h-4 w-4" /> Settings
+          </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => navigate(meta.home)}>
-            <Search className="mr-2 h-4 w-4" /> Go to portal dashboard
+            <Search className="mr-2 h-4 w-4" /> Go to dashboard
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Switch Portal
-          </DropdownMenuLabel>
-          <DropdownMenuItem onSelect={() => navigate('/citizen/dashboard')}>
-            Citizen Portal
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => navigate('/authority/dashboard')}>
-            Registrar Portal
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => navigate('/government/dashboard')}>
-            Government HQ
+          <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={onLogoutRequest}>
+            <LogOut className="mr-2 h-4 w-4" /> Logout
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -221,28 +230,44 @@ function SidebarBody({ portal: portalProp, collapsed, onToggleCollapse, onNaviga
       <div className={cn('flex items-center gap-2 border-t border-sidebar-border p-3', collapsed ? 'flex-col' : 'justify-between')}>
         <ThemeToggle className="text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground dark:text-slate-300 dark:hover:text-white" />
         {collapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onToggleCollapse}
-                className="hidden text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground dark:text-slate-300 dark:hover:text-white md:inline-flex"
-                aria-label="Expand sidebar"
-              >
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Expand</TooltipContent>
-          </Tooltip>
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onToggleCollapse}
+                  className="hidden text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground dark:text-slate-300 dark:hover:text-white md:inline-flex"
+                  aria-label="Expand sidebar"
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Expand</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:bg-destructive/15 hover:text-destructive dark:text-[#F87171] dark:hover:text-[#FCA5A5] dark:hover:bg-destructive/15"
+                  onClick={onLogoutRequest}
+                  aria-label="Logout"
+                >
+                  <LogOut className="h-[18px] w-[18px]" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Logout</TooltipContent>
+            </Tooltip>
+          </>
         ) : (
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="gap-2 text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground dark:text-slate-300 dark:hover:text-white"
-            onClick={() => navigate('/')}
+            className="gap-2 border-destructive/30 text-destructive hover:bg-destructive/15 hover:text-destructive dark:text-[#F87171] dark:border-[#F87171]/30 dark:hover:text-[#FCA5A5] dark:hover:bg-destructive/15"
+            onClick={onLogoutRequest}
           >
-            <Home className="h-4 w-4" /> Home
+            <LogOut className="h-4 w-4" /> Logout
           </Button>
         )}
       </div>
@@ -253,9 +278,12 @@ function SidebarBody({ portal: portalProp, collapsed, onToggleCollapse, onNaviga
 export default function Sidebar({ portal: portalProp = 'citizen', onOpenSearch, mobileOpen, onMobileOpenChange, collapsed: collapsedProp, onCollapsedChange }) {
   const [collapsedState, setCollapsedState] = useState(readCollapsed);
   const [mobileState, setMobileState] = useState(false);
-  const { user } = useAuth();
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const navigate = useNavigate();
+  const { logout, user } = useAuth();
 
-  const portal = portalProp || (user?.role ? portalForRole(user.role) : 'citizen');
+  // Always prefer the role from the auth context over the passed prop.
+  const portal = user?.role ? portalForRole(user.role) : portalProp;
 
   const collapsed = collapsedProp ?? collapsedState;
   const setCollapsed = (v) => {
@@ -268,8 +296,16 @@ export default function Sidebar({ portal: portalProp = 'citizen', onOpenSearch, 
 
   useEffect(() => { onCollapsedChange?.(collapsed); /* eslint-disable-next-line */ }, []);
 
+  const confirmLogout = () => {
+    setLogoutOpen(false);
+    logout();
+    toast.success('You have been signed out.');
+    navigate('/auth/login');
+  };
+
   const bodyProps = {
     portal,
+    onLogoutRequest: () => setLogoutOpen(true),
     onOpenSearch: () => { setMobileOpen(false); onOpenSearch?.(); },
   };
 
@@ -300,6 +336,23 @@ export default function Sidebar({ portal: portalProp = 'citizen', onOpenSearch, 
       >
         <SidebarBody {...bodyProps} collapsed={collapsed} onToggleCollapse={() => setCollapsed(!collapsed)} onNavigate={undefined} />
       </motion.aside>
+
+      <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign out of B.H.U.M.I?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You will need to sign in again to access your portal. Any unsaved form progress will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Stay signed in</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLogout} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Sign out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -84,11 +84,9 @@ export default function Navbar() {
 
         <div className="hidden items-center gap-2 md:flex">
           <ThemeToggle />
-          <Button variant="outline" onClick={() => navigate('/verify')}>
-            <SearchCheck className="mr-1.5 h-4 w-4" /> Verify Land
-          </Button>
-          <Button onClick={() => navigate('/citizen/dashboard')} className="group">
-            Enter Portal
+          <Button variant="outline" onClick={() => navigate('/auth/login')}>Sign In</Button>
+          <Button onClick={() => navigate('/auth/register')} className="group">
+            Get Started
             <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
           </Button>
         </div>
@@ -118,18 +116,11 @@ export default function Navbar() {
           </ul>
           <Separator className="my-5" />
           <div className="flex flex-col gap-2">
-            <Button variant="outline" className="w-full justify-start" onClick={() => { setOpen(false); navigate('/verify'); }}>
-              <SearchCheck className="mr-2 h-4 w-4" /> Verify Land
+            <Button variant="outline" className="w-full" onClick={() => { setOpen(false); navigate('/verify'); }}>
+              <SearchCheck /> Verify Land
             </Button>
-            <Button className="w-full justify-start" onClick={() => { setOpen(false); navigate('/citizen/dashboard'); }}>
-              Citizen Portal
-            </Button>
-            <Button variant="secondary" className="w-full justify-start" onClick={() => { setOpen(false); navigate('/authority/dashboard'); }}>
-              Registrar Portal
-            </Button>
-            <Button variant="secondary" className="w-full justify-start" onClick={() => { setOpen(false); navigate('/government/dashboard'); }}>
-              Government HQ
-            </Button>
+            <Button variant="secondary" className="w-full" onClick={() => { setOpen(false); navigate('/auth/login'); }}>Sign In</Button>
+            <Button className="w-full" onClick={() => { setOpen(false); navigate('/auth/register'); }}>Get Started</Button>
           </div>
         </SheetContent>
       </Sheet>

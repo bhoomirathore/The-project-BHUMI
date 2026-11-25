@@ -5,6 +5,10 @@ import ProtectedRoute from './routes/ProtectedRoute';
 
 import LandingPage from './pages/LandingPage';
 import PublicVerify from './pages/PublicVerify';
+import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
 
 import CitizenDashboard from './pages/citizen/Dashboard';
 import CitizenProperties from './pages/citizen/Properties';
@@ -44,24 +48,30 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Landing Page */}
+          {/* Landing Page (Public) */}
           <Route path="/" element={<LandingPage />} />
 
-          {/* Public Verify Page */}
+          {/* Public Verify Page (No auth required) */}
           <Route path="/verify" element={<PublicVerify />} />
 
-          {/* Auth routes redirected to home / portals */}
-          <Route path="/auth/*" element={<Navigate to="/" replace />} />
-          <Route path="/login" element={<Navigate to="/" replace />} />
-          <Route path="/register" element={<Navigate to="/" replace />} />
-          <Route path="/forgot-password" element={<Navigate to="/" replace />} />
-          <Route path="/reset-password" element={<Navigate to="/" replace />} />
+          {/* Authentication Routes (Public) */}
+          <Route path="/auth/login" element={<Login />} />
+          <Route path="/login" element={<Navigate to="/auth/login" replace />} />
 
-          {/* Citizen Portal Routes */}
+          <Route path="/auth/register" element={<Register />} />
+          <Route path="/register" element={<Navigate to="/auth/register" replace />} />
+
+          <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+          <Route path="/forgot-password" element={<Navigate to="/auth/forgot-password" replace />} />
+
+          <Route path="/auth/reset-password" element={<ResetPassword />} />
+          <Route path="/reset-password" element={<Navigate to="/auth/reset-password" replace />} />
+
+          {/* Citizen Portal Routes (Protected: CITIZEN) */}
           <Route
             path="/citizen/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['CITIZEN']}>
                 <CitizenDashboard />
               </ProtectedRoute>
             }
@@ -69,7 +79,7 @@ export default function App() {
           <Route
             path="/citizen/properties"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['CITIZEN']}>
                 <CitizenProperties />
               </ProtectedRoute>
             }
@@ -78,7 +88,7 @@ export default function App() {
           <Route
             path="/citizen/new-transfer"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['CITIZEN']}>
                 <RedirectNewTransfer />
               </ProtectedRoute>
             }
@@ -86,7 +96,7 @@ export default function App() {
           <Route
             path="/citizen/download-registry"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['CITIZEN']}>
                 <RedirectDownloadRegistry />
               </ProtectedRoute>
             }
@@ -94,7 +104,7 @@ export default function App() {
           <Route
             path="/citizen/applications"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['CITIZEN']}>
                 <CitizenApplications />
               </ProtectedRoute>
             }
@@ -102,7 +112,7 @@ export default function App() {
           <Route
             path="/citizen/applications/:id"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['CITIZEN']}>
                 <CitizenApplicationDetail />
               </ProtectedRoute>
             }
@@ -110,7 +120,7 @@ export default function App() {
           <Route
             path="/citizen/verify-land"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['CITIZEN']}>
                 <CitizenVerifyLand />
               </ProtectedRoute>
             }
@@ -118,17 +128,17 @@ export default function App() {
           <Route
             path="/citizen/book-appointment"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['CITIZEN']}>
                 <CitizenBookAppointment />
               </ProtectedRoute>
             }
           />
 
-          {/* Authority Portal Routes */}
+          {/* Authority Portal Routes (Protected: REGISTRAR) */}
           <Route
             path="/authority/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['REGISTRAR']}>
                 <AuthorityDashboard />
               </ProtectedRoute>
             }
@@ -136,7 +146,7 @@ export default function App() {
           <Route
             path="/authority/applications"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['REGISTRAR']}>
                 <AuthorityApplicationQueue />
               </ProtectedRoute>
             }
@@ -144,7 +154,7 @@ export default function App() {
           <Route
             path="/authority/applications/:id"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['REGISTRAR']}>
                 <AuthorityVerification />
               </ProtectedRoute>
             }
@@ -152,7 +162,7 @@ export default function App() {
           <Route
             path="/authority/ekyc"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['REGISTRAR']}>
                 <AuthorityEKYC />
               </ProtectedRoute>
             }
@@ -160,17 +170,17 @@ export default function App() {
           <Route
             path="/authority/registry"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['REGISTRAR']}>
                 <AuthorityRegistry />
               </ProtectedRoute>
             }
           />
 
-          {/* Government HQ Routes */}
+          {/* Government HQ Routes (Protected: GOVERNMENT_HQ) */}
           <Route
             path="/government/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['GOVERNMENT_HQ']}>
                 <GovernmentDashboard />
               </ProtectedRoute>
             }
@@ -178,7 +188,7 @@ export default function App() {
           <Route
             path="/government/analytics"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['GOVERNMENT_HQ']}>
                 <GovernmentAnalytics />
               </ProtectedRoute>
             }
@@ -186,7 +196,7 @@ export default function App() {
           <Route
             path="/government/monitoring"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['GOVERNMENT_HQ']}>
                 <GovernmentMonitoring />
               </ProtectedRoute>
             }
@@ -194,7 +204,7 @@ export default function App() {
           <Route
             path="/government/disputes"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['GOVERNMENT_HQ']}>
                 <GovernmentDisputes />
               </ProtectedRoute>
             }
