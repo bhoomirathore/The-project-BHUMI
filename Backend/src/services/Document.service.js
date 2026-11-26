@@ -8,10 +8,10 @@ const prisma = require('../prisma/client'); // existing Prisma client
  * @param {string} originalName – the original filename (e.g. "title.pdf")
  */
 async function storeDocument(fileBuffer, originalName) {
-  // 1️⃣ Pin to IPFS via Pinata
+  // 1️ Pin to IPFS via Pinata
   const { cid, gatewayUrl } = await uploadFile(fileBuffer, originalName);
 
-  // 2️⃣ Persist a reference in the DB (the schema already has a `storageReference` field)
+  // 2️ Persist a reference in the DB (the schema already has a `storageReference` field)
   const doc = await prisma.document.create({
     data: {
       name: originalName,
