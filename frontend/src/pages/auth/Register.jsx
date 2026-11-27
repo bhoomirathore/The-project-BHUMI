@@ -14,10 +14,8 @@ import {
   UserPlus,
 } from 'lucide-react';
 import authService from '../../services/authService';
-import { useAuth } from '../../hooks/useAuth';
 import BrandLogo from '@/components/common/BrandLogo';
 import ThemeToggle from '@/components/common/ThemeToggle';
-import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import { staggerContainer, staggerItem } from '@/components/common/Reveal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,7 +62,6 @@ export default function Register() {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { googleLogin } = useAuth();
 
   const strength = useMemo(() => scorePassword(formData.password), [formData.password]);
   const phoneTouched = formData.phone.length > 0;
@@ -91,16 +88,6 @@ export default function Register() {
       return;
     }
 
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long.');
-      return;
-    }
-
-    if (!/[A-Z]/.test(formData.password) || !/[a-z]/.test(formData.password) || !/\d/.test(formData.password) || !/[^A-Za-z0-9]/.test(formData.password)) {
-      setError('Password must contain uppercase, lowercase, numbers, and a special character.');
-      return;
-    }
-
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match.');
       return;
@@ -121,27 +108,13 @@ export default function Register() {
         password: formData.password,
       });
 
-      setSuccess('Account created successfully! Redirecting to sign in...');
+      setSuccess('Account created successfully! Redirecting to login...');
       toast.success('Account created', { description: 'Redirecting you to sign in.' });
       setTimeout(() => {
         navigate('/auth/login');
       }, 1500);
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleSuccess = async (credential) => {
-    setError('');
-    setLoading(true);
-    try {
-      const user = await googleLogin(credential);
-      toast.success('Signed in with Google', { description: `Welcome, ${user.name}!` });
-      navigate('/citizen/dashboard');
-    } catch (err) {
-      setError(err.message || 'Google registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -215,23 +188,6 @@ export default function Register() {
                   </Alert>
                 )}
 
-                {/* Google Sign-Up */}
-                <div className="mb-4">
-                  <GoogleSignInButton
-                    onCredentialResponse={handleGoogleSuccess}
-                    text="Sign up with Google"
-                    disabled={loading}
-                  />
-                  <div className="relative my-4">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-border" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-2 text-muted-foreground font-semibold">Or register with email</span>
-                    </div>
-                  </div>
-                </div>
-
                 <form onSubmit={handleRegister} className="flex flex-col gap-3.5 sm:gap-4">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="flex flex-col gap-1.5">
@@ -292,7 +248,7 @@ export default function Register() {
                     <p id="phone-hint" className={cn('text-xs', phoneTouched && !phoneValid ? 'text-destructive' : 'text-muted-foreground')}>
                       {phoneTouched && !phoneValid
                         ? 'Mobile number must be exactly 10 digits.'
-                        : 'Used for verified notifications and updates.'}
+                        : 'Used for OTP and application updates.'}
                     </p>
                   </div>
 
@@ -369,7 +325,7 @@ export default function Register() {
                       className={cn('h-1.5 bg-muted', strength.tone)}
                     />
                     <p className="text-[0.68rem] text-muted-foreground">
-                      Use 8+ characters with uppercase, lowercase, numbers, and symbols.
+                      Use 8+ characters with upper and lower case, a number and a symbol.
                     </p>
                   </div>
 

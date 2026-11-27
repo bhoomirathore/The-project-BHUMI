@@ -14,7 +14,7 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
         <div className="flex flex-col items-center gap-4 animate-fade-in">
           <BrandLogo size="lg" to={null} />
           <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Verifying cryptographic session…
+            <Loader2 className="h-4 w-4 animate-spin" /> Authenticating…
           </div>
         </div>
       </div>
@@ -25,13 +25,10 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
     return <Navigate to="/auth/login" state={{ from: location }} replace />;
   }
 
-  const normalizedRole = role === 'HQ' ? 'GOVERNMENT_HQ' : role;
-  const normalizedAllowed = allowedRoles.map((r) => (r === 'HQ' ? 'GOVERNMENT_HQ' : r));
-
-  if (normalizedAllowed.length > 0 && !normalizedAllowed.includes(normalizedRole)) {
-    if (normalizedRole === 'CITIZEN') return <Navigate to="/citizen/dashboard" replace />;
-    if (normalizedRole === 'REGISTRAR') return <Navigate to="/authority/dashboard" replace />;
-    if (normalizedRole === 'GOVERNMENT_HQ') return <Navigate to="/government/dashboard" replace />;
+  if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
+    if (role === 'CITIZEN') return <Navigate to="/citizen/dashboard" replace />;
+    if (role === 'REGISTRAR') return <Navigate to="/authority/dashboard" replace />;
+    if (role === 'GOVERNMENT_HQ') return <Navigate to="/government/dashboard" replace />;
     return <Navigate to="/auth/login" replace />;
   }
 
