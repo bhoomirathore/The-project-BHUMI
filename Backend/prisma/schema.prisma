@@ -1,5 +1,18 @@
-// This is your Prisma schema file.
-// Learn more: https://pris.ly/d/prisma-schema
+// B.H.U.M.I. Prisma schema (MVP, v2)
+//
+// Written against the current frontend (frontend/src) and the decisions made so far:
+//   1. One table for the whole transaction (Application) instead of applications + transfers + mutations.
+//   2. Vocabulary follows the PRD (statuses, KYC, payment values).
+//   3. Three roles only: CITIZEN, REGISTRAR, GOVERNMENT_HQ.
+//   5. Staged document uploads (a Document can exist before it is attached).
+//   6. HQ screens are sample-only, so there are no HQ/analytics/dispute tables.
+//   7. KYC status lives on the Application (no KycRecord table).
+//
+// Still open (marked PENDING DECISION below): payments, E_REGISTRY document type,
+// and whether appointment documents move onto the application.
+//
+// Rules Prisma cannot express (partial unique indexes, CHECK constraints, sequence) are in
+// partial-indexes.sql and must be added to the migration by hand.
 
 generator client {
   provider = "prisma-client-js"
@@ -10,17 +23,438 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────
+
 enum Role {
   CITIZEN
   REGISTRAR
-  HQ
+  GOVERNMENT_HQ
 }
 
+// PRD: MVP supports transfer only. Kept as an enum so other types can be added later.
+enum ApplicationType {
+  TRANSFER
+}
+
+// PRD section 11 plus RESUBMISSION (frontend statuses.js).
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_VERIFICATION
+  APPROVED
+  PROCESSING
+  COMPLETED
+  REJECTED
+  RESUBMISSION
+  FAILED
+}
+
+// PRD FR-06
+enum KycStatus {
+  PENDING
+  VERIFIED
+  FAILED
+}
+
+// PRD FR-07
+enum PaymentStatus {
+  INITIATED
+  SUCCESSFUL
+  FAILED
+}
+
+// Frontend sends 'Agricultural' | 'Residential' | 'Commercial'; map to these in the API layer.
+enum LandType {
+  AGRICULTURAL
+  RESIDENTIAL
+  COMMERCIAL
+}
+
+// Only ACTIVE is stored. "Transfer in progress" is derived from an open Application.
+enum PropertyStatus {
+  ACTIVE
+}
+
+enum DocumentType {
+  // Application documents (required to submit an application)
+  SALE_DEED
+  IDENTITY_PROOF
+  LAND_MAP
+  ENCUMBRANCE_CERT
+  TAX_RECEIPT
+  // Appointment documents (transfer appointment booking)
+  AADHAAR
+  PAN_CARD
+  KHASRA_DOC
+  PROPERTY_IMAGE
+  BUYER_IMAGE_PROOF
+  CHATUR_SEEMA
+  WITNESS_DOCS
+  // E_REGISTRY  -- PENDING DECISION: generated on demand or stored as a document?
+}
+
+enum DocumentState {
+  STAGED // uploaded, not attached to anything yet
+  ATTACHED // attached to an application or an appointment
+}
+
+enum AppointmentPurpose {
+  TRANSFER
+  APPLICATION_VISIT
+  RECORD_QUERY
+  CERTIFICATE_HELP
+  OTHER
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum AttendeeType {
+  SELF
+  REPRESENTATIVE
+}
+
+// Registrar review checklist. KYC and payment are read from the Application / Payment.
+enum VerificationType {
+  DOCUMENT // frontend checklist: documentsReviewed
+  PROPERTY // propertyMatched
+  CONFLICT // noConflict
+}
+
+enum VerificationResult {
+  PASS
+  FAIL
+}
+
+// Frontend BLOCKCHAIN_STATUSES. Architecture.md uses BLOCKCHAIN_* names; one set must be chosen.
+enum BlockchainStatus {
+  SUBMITTED
+  PENDING
+  CONFIRMED
+  SYNCED
+  SYNC_FAILED
+  FAILED
+}
+
+// ─────────────────────────────────────────────────────────────
+// Users
+// ─────────────────────────────────────────────────────────────
+
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      Role     @default(CITIZEN)
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  phone        String   @unique // 10 digits (frontend register form)
+  passwordHash String // bcrypt/argon2 hash, never the plain password
+  role         Role     @default(CITIZEN)
+  address      String?
+
+  // Blockchain identity. Citizens have no wallets; the backend maps a user to an
+  // address (or an opaque owner reference). OPEN QUESTION: custodial address vs bytes32 owner ref.
+  chainAddress String?  @unique
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  applicationsAsSeller Application[]              @relation("ApplicationSeller")
+  applicationsAsBuyer  Application[]              @relation("ApplicationBuyer")
+  ownedProperties      Property[]                 @relation("PropertyCurrentOwner")
+  ownershipRecords     PropertyOwner[]
+  uploadedDocuments    Document[]
+  appointments         Appointment[]
+  verifications        VerificationRecord[]
+  statusChanges        ApplicationStatusHistory[]
+  auditLogs            AuditLog[]
+}
+
+// ─────────────────────────────────────────────────────────────
+// Properties
+// ─────────────────────────────────────────────────────────────
+
+model Property {
+  // Business id, e.g. B.H.U.M.I-2026-MP-984210. It is the primary key.
+  propertyId     String         @id
+  khasraNumber   String
+  state          String         @default("Madhya Pradesh")
+  district       String
+  tehsil         String
+  village        String
+  areaSqFt       Decimal        @db.Decimal(12, 2)
+  landType       LandType
+  status         PropertyStatus @default(ACTIVE)
+  currentOwnerId String
+
+  // bytes32 hex used on-chain (for example keccak256 of propertyId). Fill when registered on-chain.
+  chainPropertyId String?       @unique
+  metadata        Json?
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  currentOwner     User            @relation("PropertyCurrentOwner", fields: [currentOwnerId], references: [id])
+  ownershipRecords PropertyOwner[]
+  applications     Application[]
+  appointments     Appointment[]
+
+  // A Khasra number repeats across villages, so it is unique only within district/tehsil/village.
+  @@unique([district, tehsil, village, khasraNumber])
+  @@index([currentOwnerId])
+  @@index([district])
+}
+
+model PropertyOwner {
+  id                      String    @id @default(uuid())
+  propertyId              String
+  userId                  String
+  ownershipStart          DateTime
+  ownershipEnd            DateTime? // NULL = current owner
+  // Trace each history row back to the transfer and the chain event that created it.
+  applicationId           String?
+  blockchainTransactionId String?
+  createdAt               DateTime  @default(now())
+
+  property              Property               @relation(fields: [propertyId], references: [propertyId])
+  user                  User                   @relation(fields: [userId], references: [id])
+  application           Application?           @relation(fields: [applicationId], references: [id])
+  blockchainTransaction BlockchainTransaction? @relation(fields: [blockchainTransactionId], references: [id])
+
+  @@index([propertyId])
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Application (one table for the whole transfer: decision 1)
+// ─────────────────────────────────────────────────────────────
+
+model Application {
+  id            String            @id @default(uuid())
+  // Display id APP-<year>-<NNN> is built in the API from createdAt and this number.
+  applicationNo Int               @unique @default(autoincrement())
+  type          ApplicationType   @default(TRANSFER)
+  status        ApplicationStatus @default(DRAFT)
+
+  propertyId String
+  sellerId   String // the citizen who creates the application (current owner)
+  buyerId    String
+
+  // KYC is simulated and recorded on the application (decision 7).
+  kycStatus    KycStatus @default(PENDING)
+  kycCheckedAt DateTime?
+
+  // Registrar decisions
+  rejectionReason     String?
+  rejectionComments   String?
+  resubmissionRemarks String?
+
+  // Issued after completion, from a database sequence (see partial-indexes.sql). Example REG/2026/001.
+  registryNumber String? @unique
+
+  submittedAt DateTime?
+  approvedAt  DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  property   Property @relation(fields: [propertyId], references: [propertyId])
+  seller     User     @relation("ApplicationSeller", fields: [sellerId], references: [id])
+  buyer      User     @relation("ApplicationBuyer", fields: [buyerId], references: [id])
+
+  payments               Payment[]
+  documents              Document[]
+  appointments           Appointment[]
+  verifications          VerificationRecord[]
+  statusHistory          ApplicationStatusHistory[]
+  blockchainTransactions BlockchainTransaction[]
+  ownershipRecords       PropertyOwner[]
+
+  @@index([propertyId])
+  @@index([sellerId])
+  @@index([buyerId])
+  @@index([status])
+}
+
+model ApplicationStatusHistory {
+  id            String             @id @default(uuid())
+  applicationId String
+  fromStatus    ApplicationStatus?
+  toStatus      ApplicationStatus
+  changedById   String? // NULL = changed by the system
+  note          String?
+  createdAt     DateTime           @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  changedBy   User?       @relation(fields: [changedById], references: [id])
+
+  @@index([applicationId, createdAt])
+}
+
+// PENDING DECISION (decision 4): payments are not decided yet.
+// This model assumes a payments table (PRD FR-07, Architecture section 26: "Payment records are stored in PostgreSQL").
+// Alternative: drop this model and put paymentStatus + paymentFailureMessage on Application.
+model Payment {
+  id            String        @id @default(uuid())
+  applicationId String
+  status        PaymentStatus @default(INITIATED)
+  amountPaise   Int? // nullable until a fee is defined
+  failureReason String?
+  mockReference String?       @unique
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+}
+
+model VerificationRecord {
+  id            String             @id @default(uuid())
+  applicationId String
+  verifiedById  String
+  type          VerificationType
+  result        VerificationResult
+  remarks       String?
+  createdAt     DateTime           @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  verifiedBy  User        @relation(fields: [verifiedById], references: [id])
+
+  // The latest record per application + type is the current result.
+  @@index([applicationId, type, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Documents (staged uploads: decision 5)
+// ─────────────────────────────────────────────────────────────
+
+model Document {
+  id                String        @id @default(uuid())
+  // Both are NULL while STAGED. A document belongs to an application OR an appointment.
+  // OPEN: whether appointment documents later move onto the application.
+  applicationId     String?
+  appointmentId     String?
+  uploadedById      String
+  type              DocumentType
+  state             DocumentState @default(STAGED)
+
+  fileName          String
+  mimeType          String
+  sizeBytes         Int
+  storageReference  String // key/path in secure storage, never a public URL
+  fileHash          String        @db.VarChar(66) // SHA-256 of the exact original bytes, computed by the server
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  uploadedBy  User         @relation(fields: [uploadedById], references: [id])
+
+  @@index([applicationId])
+  @@index([appointmentId])
+  @@index([uploadedById, state])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Appointments (standalone, optionally linked to an application)
+// ─────────────────────────────────────────────────────────────
+
+model Appointment {
+  id            String             @id @default(uuid())
+  // Display reference APT-<year>-<NNNN> is built in the API from this number.
+  referenceNo   Int                @unique @default(autoincrement())
+  userId        String
+  applicationId String?
+  propertyId    String?
+  purpose       AppointmentPurpose
+  status        AppointmentStatus  @default(SCHEDULED)
+
+  office String // Sub-Registrar Office name (frontend locations list)
+  date   DateTime @db.Date
+  slot   String // '10:00 AM' | '11:30 AM' | '02:00 PM' | '04:00 PM'
+
+  attendeeType   AttendeeType @default(SELF)
+  attendeeName   String?
+  attendeeMobile String?
+  contactMobile  String?
+  assistanceNeeded Boolean    @default(false)
+  notes          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id])
+  application Application? @relation(fields: [applicationId], references: [id])
+  property    Property?    @relation(fields: [propertyId], references: [propertyId])
+  documents   Document[]
+
+  // Slot availability is counted per office + date + slot.
+  @@index([office, date, slot])
+  @@index([userId])
+  @@index([applicationId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Blockchain
+// ─────────────────────────────────────────────────────────────
+
+model BlockchainTransaction {
+  id              String           @id @default(uuid())
+  applicationId   String
+  txHash          String?          @unique
+  status          BlockchainStatus @default(SUBMITTED)
+  error           String?
+  blockNumber     Int?
+  chainId         Int?
+  contractAddress String?
+  submittedAt     DateTime?
+  confirmedAt     DateTime?
+  syncedAt        DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  application      Application     @relation(fields: [applicationId], references: [id])
+  events           BlockchainEvent[]
+  ownershipRecords PropertyOwner[]
+
+  // Several attempts per application are allowed (retry after a failure).
+  @@index([applicationId])
+  @@index([status])
+}
+
+model BlockchainEvent {
+  id            String   @id @default(uuid())
+  transactionId String
+  eventType     String
+  logIndex      Int
+  eventData     Json
+  occurredAt    DateTime
+  createdAt     DateTime @default(now())
+
+  transaction BlockchainTransaction @relation(fields: [transactionId], references: [id])
+
+  // Idempotent event sync: the same tx + log index is stored once.
+  @@unique([transactionId, logIndex])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Audit
+// ─────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String? // NULL = system action (for example the event listener)
+  action     String
+  entityType String
+  entityId   String
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([userId])
 }
